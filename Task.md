@@ -109,7 +109,7 @@ Acceptance Criteria:
 
 ## Task 1.2
 
-Status: PENDING
+Status: COMPLETED
 
 Google Authentication
 
@@ -121,7 +121,7 @@ Acceptance Criteria:
 
 ## Task 1.3
 
-Status: PENDING
+Status: COMPLETED
 
 User Profiles
 

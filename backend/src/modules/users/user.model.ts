@@ -4,8 +4,10 @@ export interface IUser extends Document {
   name: string;
   username: string;
   email: string;
+  password?: string;
   avatar?: string;
-  provider: 'google';
+  provider: 'local' | 'google' | 'both';
+  isGoogleVerified: boolean;
   role: 'USER' | 'ADMIN';
   rating: number;
   rank: string;
@@ -27,8 +29,10 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
+    password: { type: String, select: false },
     avatar: { type: String },
-    provider: { type: String, enum: ['google'], default: 'google' },
+    provider: { type: String, enum: ['local', 'google', 'both'], default: 'local' },
+    isGoogleVerified: { type: Boolean, default: false },
     role: { type: String, enum: ['USER', 'ADMIN'], default: 'USER' },
     rating: { type: Number, default: 1000 },
     rank: { type: String, default: 'Rookie' },
