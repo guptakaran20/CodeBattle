@@ -14,6 +14,7 @@
   "type": "module",
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -25,11 +26,13 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie": "^0.7.2",
     "cookie-parser": "^1.4.7",
     "google-auth-library": "^10.7.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.1",
     "nanoid": "^3.3.14",
+    "socket.io": "^4.8.3",
     "zod": "^4.4.3"
   }
 }

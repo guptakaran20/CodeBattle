@@ -7,27 +7,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Users, Clock, ShieldAlert, CheckCircle2, Copy } from 'lucide-react';
+import { useBattleSocket } from '@/hooks/useBattleSocket';
 
 export default function BattleLobbyPage() {
   const params = useParams();
   const router = useRouter();
   const battleCode = params.battleCode as string;
 
-  const [battle, setBattle] = useState<any>(null);
+  const { isConnected, battle, participants: onlineParticipants, joinRoom } = useBattleSocket(battleCode);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchBattle = async () => {
-    try {
-      const res = await api.get(`/battles/${battleCode}`);
-      if (res.data.success) {
-        setBattle(res.data.data.battle);
-      }
-    } catch (error) {
-      toast.error('Battle not found');
-      router.push('/arena');
-    }
-  };
 
   const fetchUser = async () => {
     try {
@@ -41,28 +29,13 @@ export default function BattleLobbyPage() {
   };
 
   useEffect(() => {
-    Promise.all([fetchBattle(), fetchUser()]).finally(() => setLoading(false));
-  }, [battleCode]);
-
-  const handleJoin = async () => {
-    try {
-      const res = await api.post(`/battles/${battleCode}/join`);
-      if (res.data.success) {
-        toast.success('Successfully joined the battle!');
-        fetchBattle(); // Refresh
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to join');
-    }
-  };
+    fetchUser();
+  }, []);
 
   const handleStart = async () => {
     try {
       const res = await api.post(`/battles/${battleCode}/start`);
-      if (res.data.success) {
-        toast.success('Battle Started!');
-        fetchBattle(); // Refresh
-      }
+      // No need to refresh, socket handles it
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to start');
     }
@@ -73,8 +46,7 @@ export default function BattleLobbyPage() {
     toast.success('Battle code copied to clipboard!');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading Lobby...</div>;
-  if (!battle) return <div className="min-h-screen flex items-center justify-center">Battle not found.</div>;
+  if (!battle) return <div className="min-h-screen flex items-center justify-center">Loading Lobby...</div>;
 
   const allMembers = battle.teams.flatMap((t: any) => t.members);
   const isParticipant = currentUser && allMembers.some((m: any) => m._id === currentUser._id);
@@ -96,6 +68,9 @@ export default function BattleLobbyPage() {
                 'bg-green-100 text-green-800'
               }`}>
                 {battle.status}
+              </span>
+              <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full border ${isConnected ? 'border-green-200 text-green-600 bg-green-50' : 'border-red-200 text-red-600 bg-red-50'}`}>
+                {isConnected ? 'Live' : 'Offline'}
               </span>
             </div>
             <p className="text-gray-500 mt-1">Host: {battle.creator.username}</p>
@@ -138,17 +113,26 @@ export default function BattleLobbyPage() {
                     <div key={team.teamId} className="p-6">
                       <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Team {idx + 1}</h4>
                       <div className="flex flex-col gap-3">
-                        {team.members.map((member: any) => (
-                          <div key={member._id} className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold uppercase">
-                              {member.username.charAt(0)}
+                        {team.members.map((member: any) => {
+                          const isOnline = onlineParticipants.includes(member._id);
+                          return (
+                            <div key={member._id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold uppercase">
+                                  {member.username.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{member.username}</p>
+                                  {member._id === battle.creator._id && <span className="text-xs text-blue-500 font-medium">Host</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                                <span className="text-xs text-gray-500">{isOnline ? 'Online' : 'Offline'}</span>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">{member.username}</p>
-                              {member._id === battle.creator._id && <span className="text-xs text-blue-500 font-medium">Host</span>}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -190,7 +174,7 @@ export default function BattleLobbyPage() {
                   {!isParticipant ? (
                     <div className="text-center space-y-4">
                       <p className="text-sm text-gray-600">You have been invited to join this battle.</p>
-                      <Button onClick={handleJoin} disabled={isFull} className="w-full" size="lg">
+                      <Button onClick={joinRoom} disabled={isFull} className="w-full" size="lg">
                         {isFull ? 'Battle is Full' : 'Join Battle'}
                       </Button>
                     </div>

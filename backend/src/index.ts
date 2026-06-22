@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import http from 'http';
 import { connectDB } from './config/database.js';
 import { globalErrorHandler } from './common/middleware/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
@@ -10,11 +11,18 @@ import userRoutes from './modules/users/user.routes.js';
 import problemRoutes from './modules/problems/problem.routes.js';
 import battleRoutes from './modules/battles/battle.routes.js';
 import submissionRoutes from './modules/submissions/submission.routes.js';
+import { initializeSocket } from './modules/websockets/socket.service.js';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 4000;
+
+// Create HTTP server instead of listening directly on Express app
+const httpServer = http.createServer(app);
+
+// Initialize Socket.IO
+initializeSocket(httpServer);
 
 // Middleware
 app.use(cors({
@@ -45,6 +53,6 @@ app.get('/health', (req: Request, res: Response) => {
 // Error Handling Middleware
 app.use(globalErrorHandler);
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

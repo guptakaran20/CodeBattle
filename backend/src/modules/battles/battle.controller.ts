@@ -5,6 +5,8 @@ import { Problem } from '../problems/problem.model.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
+import { BattleGatewayService } from '../websockets/battle.gateway.js';
+import { getIO } from '../websockets/socket.service.js';
 
 const createBattleSchema = z.object({
   battleType: z.enum(['ONE_VS_ONE', 'TWO_VS_TWO', 'FOUR_VS_FOUR', 'TOURNAMENT']),
@@ -125,6 +127,16 @@ export const joinBattle = async (req: AuthenticatedRequest, res: Response, next:
       payload: { userId: req.user.id }
     });
 
+    // We don't necessarily need to emit USER_JOINED here because the gateway handles it when they connect via socket.
+    // However, if they are already connected, the gateway will not know until they re-join.
+    // Let's emit a battle updated event just in case, though the socket room will handle the state refresh.
+    try {
+      const io = getIO();
+      BattleGatewayService.broadcastBattleUpdated(io, battle.battleCode, 'A player joined the battle');
+    } catch (e) {
+      console.error('Socket not initialized or failed to broadcast', e);
+    }
+
     return res.status(200).json({ success: true, data: { message: 'Joined successfully', battle } });
   } catch (error) {
     next(error);
@@ -161,6 +173,14 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
       payload: { startTime: battle.startTime }
     });
 
+    try {
+      const io = getIO();
+      const endTime = new Date(battle.startTime.getTime() + battle.durationMinutes * 60000);
+      BattleGatewayService.broadcastBattleStarted(io, battle.battleCode, battle.startTime.toISOString(), endTime.toISOString());
+    } catch (e) {
+      console.error('Socket not initialized or failed to broadcast', e);
+    }
+
     return res.status(200).json({ success: true, data: { message: 'Battle started', battle } });
   } catch (error) {
     next(error);
@@ -190,6 +210,13 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
       eventType: 'BattleEnded', 
       payload: { reason: 'Cancelled by creator' }
     });
+
+    try {
+      const io = getIO();
+      BattleGatewayService.broadcastBattleCancelled(io, battle.battleCode, 'Battle cancelled by host');
+    } catch (e) {
+      console.error('Socket not initialized or failed to broadcast', e);
+    }
 
     return res.status(200).json({ success: true, data: { message: 'Battle cancelled' } });
   } catch (error) {

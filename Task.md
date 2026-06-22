@@ -145,6 +145,27 @@ Deliverables:
 * Submission schema
 * Problem schema
 
+--- `[x]` Task 2.3: Phase 2 Frontend UI
+  - `[x]` Install @monaco-editor/react
+  - `[x]` Create /arena (Dashboard)
+  - `[x]` Create /arena/create (Create Battle Page)
+  - `[x]` Create /battle/[battleCode] (Waiting Room Lobby)
+  - `[x]` Create /history (Battle History)
+  - `[x]` Create /u/[username] (Public User Profile)
+
+# Phase 3 Tasks
+- `[x]` Task 3.1: Socket.IO Infrastructure
+  - `[x]` Install socket.io and socket.io-client
+  - `[x]` Define Shared Event Contracts & Types
+  - `[x]` Implement Socket Server with Cookie JWT Auth
+- `[x]` Task 3.2: Battle Gateway & Presence
+  - `[x]` Implement Battle Gateway (joinRoom, battleState sync)
+  - `[x]` Implement Presence Tracking with 15s disconnect timeout
+  - `[x]` Integrate Socket broadcasts into Battle HTTP Controller
+- `[x]` Task 3.3: Frontend Realtime Sync
+  - `[x]` Implement useBattleSocket hook
+  - `[x]` Update Battle Lobby UI to reflect live changesns room
+
 ---
 
 ## Task 2.2
