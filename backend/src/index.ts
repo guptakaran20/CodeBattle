@@ -7,6 +7,9 @@ import { connectDB } from './config/database.js';
 import { globalErrorHandler } from './common/middleware/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/users/user.routes.js';
+import problemRoutes from './modules/problems/problem.routes.js';
+import battleRoutes from './modules/battles/battle.routes.js';
+import submissionRoutes from './modules/submissions/submission.routes.js';
 
 dotenv.config();
 
@@ -14,7 +17,10 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 // Middleware
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -22,8 +28,15 @@ app.use(cookieParser());
 connectDB();
 
 // Routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', environment: process.env.NODE_ENV });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/problems', problemRoutes);
+app.use('/api/battles', battleRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: { status: 'ok', message: 'Backend is healthy' } });

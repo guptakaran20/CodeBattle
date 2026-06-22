@@ -135,7 +135,7 @@ Acceptance Criteria:
 
 ## Task 2.1
 
-Status: PENDING
+Status: COMPLETED
 
 Battle Domain Models
 
@@ -149,7 +149,7 @@ Deliverables:
 
 ## Task 2.2
 
-Status: PENDING
+Status: COMPLETED
 
 Room Creation
 
@@ -161,7 +161,7 @@ Acceptance Criteria:
 
 ## Task 2.3
 
-Status: PENDING
+Status: COMPLETED
 
 Room Joining
 
@@ -173,7 +173,7 @@ Acceptance Criteria:
 
 ## Task 2.4
 
-Status: PENDING
+Status: COMPLETED
 
 Battle Lifecycle
 
