@@ -164,7 +164,12 @@ Deliverables:
   - `[x]` Integrate Socket broadcasts into Battle HTTP Controller
 - `[x]` Task 3.3: Frontend Realtime Sync
   - `[x]` Implement useBattleSocket hook
-  - `[x]` Update Battle Lobby UI to reflect live changesns room
+  - `[x]` Update Battle Lobby UI to reflect live changes
+
+# Phase 4 Tasks
+- `[/]` Task 4.1: Judge0 Infrastructure
+- `[ ]` Task 4.2: Submission Lifecycle & Processors
+- `[ ]` Task 4.3: Frontend Coding Arena
 
 ---
 
@@ -210,7 +215,7 @@ Acceptance Criteria:
 
 ## Task 3.1
 
-Status: PENDING
+Status: COMPLETED
 
 Socket Server Setup
 
@@ -222,7 +227,7 @@ Acceptance Criteria:
 
 ## Task 3.2
 
-Status: PENDING
+Status: COMPLETED
 
 Room Synchronization
 
@@ -234,7 +239,7 @@ Acceptance Criteria:
 
 ## Task 3.3
 
-Status: PENDING
+Status: COMPLETED
 
 Live Timer
 
@@ -246,7 +251,7 @@ Acceptance Criteria:
 
 ## Task 3.4
 
-Status: PENDING
+Status: COMPLETED
 
 Player Presence
 

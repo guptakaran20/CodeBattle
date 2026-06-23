@@ -18,6 +18,8 @@ export interface IBattle extends Document {
     allowSpectators: boolean;
     aiReviewEnabled: boolean;
   };
+  winCondition: 'FIRST_ACCEPTED' | 'MOST_TESTS' | 'POINTS';
+  winner?: Types.ObjectId;
   result?: {
     winningTeamId?: string;
     winReason?: 'FIRST_ACCEPTED' | 'MOST_TESTS' | 'TIMEOUT' | 'MANUAL';
@@ -57,6 +59,12 @@ const battleSchema = new Schema<IBattle>(
       allowSpectators: { type: Boolean, default: false },
       aiReviewEnabled: { type: Boolean, default: true },
     },
+    winCondition: {
+      type: String,
+      enum: ['FIRST_ACCEPTED', 'MOST_TESTS', 'POINTS'],
+      default: 'FIRST_ACCEPTED'
+    },
+    winner: { type: Schema.Types.ObjectId, ref: 'User' },
     result: {
       winningTeamId: { type: String },
       winReason: {

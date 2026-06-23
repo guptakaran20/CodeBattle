@@ -41,6 +41,34 @@ export interface BattleCancelledPayload {
   reason: string;
 }
 
+export interface SubmissionPendingPayload {
+  userId: string;
+  username: string;
+}
+
+export interface SubmissionEvaluatedPayload {
+  userId: string;
+  username: string;
+  status: string; // e.g. ACCEPTED, WRONG_ANSWER
+}
+
+export interface SubmissionVerdictPayload {
+  userId: string;
+  username: string;
+  status: string;
+  passedTests?: number;
+  totalTests?: number;
+}
+
+export interface WinnerDeclaredPayload {
+  userId: string;
+  username: string;
+}
+
+export interface BattleCompletedPayload {
+  battleCode: string;
+}
+
 export interface ErrorPayload {
   message: string;
 }

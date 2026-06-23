@@ -7,10 +7,10 @@ export interface IBattleEvent extends Document {
     | 'PlayerJoined'
     | 'PlayerLeft'
     | 'BattleStarted'
-    | 'SubmissionMade'
+    | 'SubmissionCreated'
     | 'SubmissionEvaluated'
     | 'WinnerDeclared'
-    | 'BattleEnded';
+    | 'BattleCompleted';
   payload: any;
   timestamp: Date;
 }
@@ -25,10 +25,10 @@ const battleEventSchema = new Schema<IBattleEvent>(
         'PlayerJoined',
         'PlayerLeft',
         'BattleStarted',
-        'SubmissionMade',
+        'SubmissionCreated',
         'SubmissionEvaluated',
         'WinnerDeclared',
-        'BattleEnded',
+        'BattleCompleted',
       ],
       required: true,
     },

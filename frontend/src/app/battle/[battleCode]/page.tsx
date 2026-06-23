@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Users, Clock, ShieldAlert, CheckCircle2, Copy } from 'lucide-react';
 import { useBattleSocket } from '@/hooks/useBattleSocket';
+import ArenaView from './ArenaView';
 
 export default function BattleLobbyPage() {
   const params = useParams();
   const router = useRouter();
   const battleCode = params.battleCode as string;
 
-  const { isConnected, battle, participants: onlineParticipants, joinRoom } = useBattleSocket(battleCode);
+  const socketHook = useBattleSocket(battleCode);
+  const { isConnected, battle, participants: onlineParticipants, joinRoom } = socketHook;
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const fetchUser = async () => {
@@ -49,9 +51,36 @@ export default function BattleLobbyPage() {
   if (!battle) return <div className="min-h-screen flex items-center justify-center">Loading Lobby...</div>;
 
   const allMembers = battle.teams.flatMap((t: any) => t.members);
-  const isParticipant = currentUser && allMembers.some((m: any) => m._id === currentUser._id);
+  const isParticipant = currentUser && allMembers.some((m: any) => m._id === currentUser._id || m === currentUser._id);
   const isCreator = currentUser && battle.creator._id === currentUser._id;
   const isFull = allMembers.length >= battle.maxParticipants;
+
+  // Check auto-expiration if backend hasn't updated it yet
+  const now = new Date().getTime();
+  const endTime = battle.startTime ? new Date(battle.startTime).getTime() + battle.durationMinutes * 60000 : 0;
+  const isExpired = battle.status === 'IN_PROGRESS' && now > endTime;
+  const displayStatus = isExpired ? 'COMPLETED' : battle.status;
+
+  if (displayStatus === 'IN_PROGRESS') {
+    if (isParticipant) {
+      return <ArenaView battle={battle} socketHook={socketHook} currentUser={currentUser} />;
+    } else {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center space-y-4 bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-md">
+            <ShieldAlert className="w-12 h-12 text-red-500 mx-auto" />
+            <h2 className="text-xl font-bold text-gray-900">Battle in Progress</h2>
+            <p className="text-gray-500">This battle has already started. You cannot join or spectate at this time.</p>
+            <Button onClick={() => router.push('/')} variant="outline" className="mt-4 w-full">Return Home</Button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (displayStatus === 'COMPLETED') {
+    return <ArenaView battle={battle} socketHook={socketHook} currentUser={currentUser} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -84,17 +113,6 @@ export default function BattleLobbyPage() {
             </button>
           </div>
         </div>
-
-        {battle.status === 'IN_PROGRESS' && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r-lg shadow-sm">
-            <h3 className="text-lg font-bold text-yellow-800 flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5" /> Battle is currently in progress!
-            </h3>
-            <p className="text-yellow-700 mt-2">
-              The coding arena UI will be unlocked in Phase 4. For now, the battle lifecycle is active in the backend.
-            </p>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           

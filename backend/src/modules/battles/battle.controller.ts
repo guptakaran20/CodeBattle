@@ -78,7 +78,7 @@ export const getBattleHistory = async (req: AuthenticatedRequest, res: Response,
 export const getBattle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const battle = await Battle.findOne({ battleCode: req.params.battleCode as string })
-      .populate('problem', 'title slug difficulty')
+      .populate('problem', 'title slug difficulty description examples constraints testcases starterCode')
       .populate('creator', 'username name')
       .populate('teams.members', 'username name avatar');
       
@@ -86,7 +86,31 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }
 
-    return res.status(200).json({ success: true, data: { battle } });
+    if (battle.status === 'IN_PROGRESS' && battle.startTime) {
+      const endTime = battle.startTime.getTime() + battle.durationMinutes * 60000;
+      if (Date.now() > endTime) {
+        battle.status = 'COMPLETED';
+        if (!battle.result) {
+          battle.result = { winReason: 'TIMEOUT' };
+        }
+        await battle.save();
+        
+        try {
+          const io = getIO();
+          BattleGatewayService.broadcastBattleUpdated(io, battle.battleCode, 'Battle duration expired');
+        } catch (e) {
+          console.error('Socket not initialized or failed to broadcast', e);
+        }
+      }
+    }
+
+    // Filter out hidden testcases
+    const battleObj = battle.toObject();
+    if (battleObj.problem && (battleObj.problem as any).testcases) {
+      (battleObj.problem as any).testcases = (battleObj.problem as any).testcases.filter((tc: any) => !tc.isHidden);
+    }
+
+    return res.status(200).json({ success: true, data: { battle: battleObj } });
   } catch (error) {
     next(error);
   }
@@ -207,7 +231,7 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
 
     await BattleEvent.create({
       battleId: battle._id,
-      eventType: 'BattleEnded', 
+      eventType: 'BattleCompleted', 
       payload: { reason: 'Cancelled by creator' }
     });
 

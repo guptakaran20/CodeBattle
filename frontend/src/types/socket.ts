@@ -10,6 +10,13 @@ export enum SocketEvents {
   BATTLE_STARTED = "battleStarted",
   BATTLE_CANCELLED = "battleCancelled",
 
+  SUBMISSION_PENDING = "submissionPending",
+  SUBMISSION_EVALUATED = "submissionEvaluated",
+  SUBMISSION_VERDICT = "submissionVerdict",
+
+  WINNER_DECLARED = "winnerDeclared",
+  BATTLE_COMPLETED = "battleCompleted",
+
   ERROR = "error"
 }
 
@@ -51,6 +58,34 @@ export interface BattleStartedPayload {
 export interface BattleCancelledPayload {
   battleCode: string;
   reason: string;
+}
+
+export interface SubmissionPendingPayload {
+  userId: string;
+  username: string;
+}
+
+export interface SubmissionEvaluatedPayload {
+  userId: string;
+  username: string;
+  status: string;
+}
+
+export interface SubmissionVerdictPayload {
+  userId: string;
+  username: string;
+  status: string;
+  passedTests?: number;
+  totalTests?: number;
+}
+
+export interface WinnerDeclaredPayload {
+  userId: string;
+  username: string;
+}
+
+export interface BattleCompletedPayload {
+  battleCode: string;
 }
 
 export interface ErrorPayload {

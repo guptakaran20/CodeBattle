@@ -30,7 +30,8 @@ export const initializeSocket = (httpServer: HttpServer) => {
         return next(new Error('Authentication error: No token provided'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as string) as any;
+      const accessSecret = process.env.ACCESS_TOKEN_SECRET || 'access_secret_fallback';
+      const decoded = jwt.verify(token, accessSecret) as any;
       const user = await User.findById(decoded.userId).select('username name avatar');
       if (!user) {
         return next(new Error('Authentication error: User not found'));

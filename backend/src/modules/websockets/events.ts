@@ -10,5 +10,12 @@ export enum SocketEvents {
   BATTLE_STARTED = "battleStarted",
   BATTLE_CANCELLED = "battleCancelled",
 
+  SUBMISSION_PENDING = "submissionPending",
+  SUBMISSION_EVALUATED = "submissionEvaluated",
+  SUBMISSION_VERDICT = "submissionVerdict",
+
+  WINNER_DECLARED = "winnerDeclared",
+  BATTLE_COMPLETED = "battleCompleted",
+
   ERROR = "error"
 }
