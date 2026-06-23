@@ -12,6 +12,7 @@ import problemRoutes from './modules/problems/problem.routes.js';
 import battleRoutes from './modules/battles/battle.routes.js';
 import submissionRoutes from './modules/submissions/submission.routes.js';
 import judge0Routes from './modules/submissions/judge0.routes.js';
+import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
 import { initializeSocket } from './modules/websockets/socket.service.js';
 
 dotenv.config();
@@ -47,6 +48,7 @@ app.use('/api/problems', problemRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/judge0', judge0Routes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: { status: 'ok', message: 'Backend is healthy' } });

@@ -61,22 +61,29 @@ export interface BattleCancelledPayload {
 }
 
 export interface SubmissionPendingPayload {
+  submissionId: string;
   userId: string;
   username: string;
 }
 
 export interface SubmissionEvaluatedPayload {
+  submissionId: string;
   userId: string;
   username: string;
-  status: string;
+  verdict: string;
 }
 
 export interface SubmissionVerdictPayload {
+  submissionId: string;
+  battleCode: string;
   userId: string;
   username: string;
-  status: string;
-  passedTests?: number;
-  totalTests?: number;
+  verdict: string;
+  executionTime?: number;
+  memory?: number;
+  compileOutput?: string;
+  verdictReason?: string;
+  createdAt: string;
 }
 
 export interface WinnerDeclaredPayload {

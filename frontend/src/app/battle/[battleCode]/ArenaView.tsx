@@ -18,13 +18,16 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
   const problem = battle.problem;
   const [language, setLanguage] = useState<'CPP' | 'JAVA' | 'PYTHON'>('PYTHON');
   const [code, setCode] = useState<string>(problem.starterCode?.PYTHON || '');
-  const [activeTab, setActiveTab] = useState<'testcases' | 'result'>('testcases');
+  const [activeTab, setActiveTab] = useState<'testcases' | 'result' | 'feed'>('testcases');
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [runResult, setRunResult] = useState<any>(null);
   const [verdictData, setVerdictData] = useState<any>(null);
+  
+  const [pendingSubmissionId, setPendingSubmissionId] = useState<string | null>(null);
+  const [pendingTimeoutId, setPendingTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const { isConnected, participants, battle: socketBattle } = socketHook;
+  const { isConnected, participants, battle: socketBattle, submissionHistory, winner } = socketHook;
 
   // Local storage persistence
   useEffect(() => {
@@ -45,13 +48,28 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
 
   // Listen to socket events for verdicts
   useEffect(() => {
-    // These events would normally be subscribed to in the socket hook and passed down
-    // or we can add an onEvent callback. Since useBattleSocket doesn't expose the socket directly,
-    // we'll rely on fetching from an endpoint or updating state when socket receives an event.
-    // Wait, useBattleSocket currently doesn't return SUBMISSION_VERDICT details, 
-    // it just toasts it. We should probably just poll or listen if we can.
-    // For now, if we don't have direct socket event access here, we can still use it.
-  }, []);
+    if (!pendingSubmissionId) return;
+
+    // Find if the pending submission is in the history and has a verdict
+    const event = submissionHistory.find((s: any) => s.submissionId === pendingSubmissionId && s.verdict);
+    
+    if (event) {
+      // We got the verdict from the socket
+      setVerdictData(event);
+      setSubmitting(false);
+      setPendingSubmissionId(null);
+      if (pendingTimeoutId) clearTimeout(pendingTimeoutId);
+    }
+  }, [submissionHistory, pendingSubmissionId, pendingTimeoutId]);
+
+  useEffect(() => {
+    if (winner) {
+      toast.success(`Battle Completed! ${winner.username} has won!`, {
+        duration: 8000,
+        position: 'top-center'
+      });
+    }
+  }, [winner]);
 
   const handleRunCode = async () => {
     setRunning(true);
@@ -78,7 +96,7 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
     setSubmitting(true);
     setActiveTab('result');
     setRunResult(null);
-    setVerdictData({ status: 'PENDING' });
+    setVerdictData({ verdict: 'PENDING' });
     try {
       // 1. Post to submission endpoint
       const res = await api.post(`/submissions`, {
@@ -89,42 +107,35 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
         attemptNumber: 1
       });
       
-      // Since it's async (polling or webhook), we could poll the submission status here for UI update
-      // For MVP, we'll poll it manually since the socket hook doesn't currently expose SUBMISSION_VERDICT.
       const submissionId = res.data.data.submission._id;
-      pollSubmission(submissionId);
+      setPendingSubmissionId(submissionId);
+
+      // 20 sec fallback timeout
+      const timeout = setTimeout(async () => {
+        try {
+          const fallbackRes = await api.get(`/submissions/single/${submissionId}`);
+          if (fallbackRes.data.success) {
+            const sub = fallbackRes.data.data.submission;
+            if (sub && sub.status !== 'PENDING') {
+              setVerdictData({ ...sub, verdict: sub.status });
+              setSubmitting(false);
+              setPendingSubmissionId(null);
+              toast.info("Result received via fallback polling.");
+            } else {
+              setSubmitting(false);
+              toast.error("Evaluation timed out.");
+            }
+          }
+        } catch (e) {
+          setSubmitting(false);
+        }
+      }, 20000);
+      setPendingTimeoutId(timeout);
 
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit code');
       setSubmitting(false);
     }
-  };
-
-  const pollSubmission = async (submissionId: string) => {
-    let attempts = 0;
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const res = await api.get(`/submissions/${battle._id}`); // Getting all submissions, or we need a specific endpoint
-        // Wait, we need an endpoint to GET /api/submissions/single/:id
-        // For now, let's just use the battle's submissions array and find ours
-        if (res.data.success) {
-          const sub = res.data.data.submissions.find((s: any) => s._id === submissionId);
-          if (sub && sub.status !== 'PENDING') {
-            setVerdictData(sub);
-            setSubmitting(false);
-            clearInterval(interval);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      if (attempts >= 20) {
-        clearInterval(interval);
-        setSubmitting(false);
-        toast.error("Polling timeout");
-      }
-    }, 1500);
   };
 
   return (
@@ -227,9 +238,37 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                 >
                   Test Result
                 </button>
+                <button 
+                  className={`text-sm font-medium h-full px-2 border-b-2 ${activeTab === 'feed' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}
+                  onClick={() => setActiveTab('feed')}
+                >
+                  Battle Feed
+                </button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 font-mono text-sm">
-                {activeTab === 'testcases' ? (
+                {activeTab === 'feed' ? (
+                  <div className="space-y-3">
+                    {submissionHistory.map((item: any, idx: number) => {
+                      if (item.verdict) {
+                        return (
+                          <div key={idx} className="p-2 bg-slate-100 rounded flex justify-between items-center border">
+                            <span><span className="font-bold">{item.username}</span> got <span className={`font-semibold ${item.verdict === 'ACCEPTED' ? 'text-green-600' : 'text-red-600'}`}>{item.verdict}</span></span>
+                          </div>
+                        );
+                      } else if (item.status) {
+                        return null; // Intermediate step, we can ignore or show if desired
+                      } else {
+                        return (
+                          <div key={idx} className="p-2 bg-slate-100 rounded text-slate-600 flex items-center gap-2 border">
+                            <Clock className="w-4 h-4 animate-spin"/>
+                            <span><span className="font-bold">{item.username}</span> is judging...</span>
+                          </div>
+                        );
+                      }
+                    })}
+                    {submissionHistory.length === 0 && <div className="text-slate-500 italic">No activity yet. Wait for someone to submit code.</div>}
+                  </div>
+                ) : activeTab === 'testcases' ? (
                   <div className="space-y-4">
                     {problem.testcases.map((tc: any, i: number) => (
                       <div key={i} className="border p-3 rounded">
@@ -268,10 +307,10 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                       </div>
                     )}
 
-                    {!running && !submitting && verdictData && verdictData.status !== 'PENDING' && (
+                    {!running && !submitting && verdictData && verdictData.verdict !== 'PENDING' && (
                       <div className="space-y-4">
-                        <h3 className={`text-lg font-bold ${verdictData.status === 'ACCEPTED' ? 'text-green-600' : 'text-red-600'}`}>
-                          {verdictData.status}
+                        <h3 className={`text-lg font-bold ${verdictData.verdict === 'ACCEPTED' ? 'text-green-600' : 'text-red-600'}`}>
+                          {verdictData.verdict}
                         </h3>
                         {verdictData.verdictReason && (
                           <p className="text-slate-600">{verdictData.verdictReason}</p>

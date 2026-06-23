@@ -3,6 +3,9 @@ import { BattleEvent } from '../battles/battleEvent.model.js';
 import { Battle } from '../battles/battle.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
+import { SubmissionCacheService } from '../../services/redis/SubmissionCacheService.js';
+import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
+import { LeaderboardService } from '../../services/redis/LeaderboardService.js';
 
 export const evaluateSubmissionResult = async (submissionId: string, judge0Results: any[]) => {
   const submission = await Submission.findById(submissionId).populate('user');
@@ -63,6 +66,9 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
 
   await submission.save();
 
+  // Update Redis cache
+  await SubmissionCacheService.updateStatus(submission._id.toString(), finalStatus, finalStatus === 'ACCEPTED');
+
   // 1. Create Event
   await BattleEvent.create({
     battleId: submission.battle,
@@ -77,14 +83,38 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
 
   const io = getIO();
 
-  // 2. Emit Socket Event
-  io?.to(battle.battleCode).emit(SocketEvents.SUBMISSION_VERDICT, {
+  // 2. Emit Socket Events
+
+  // Full payload for the submitting user (Private)
+  const fullPayload = {
+    submissionId: submission._id.toString(),
+    battleCode: battle.battleCode,
     userId: user._id.toString(),
     username: user.username,
-    status: finalStatus,
-    passedTests: submission.passedTests,
-    totalTests: submission.totalTests
-  });
+    verdict: finalStatus,
+    executionTime: submission.executionTime,
+    memory: submission.memory,
+    compileOutput: submission.compileOutput,
+    verdictReason: submission.verdictReason,
+    createdAt: (submission.submittedAt || new Date()).toISOString()
+  };
+
+  io?.to(`user_${user._id.toString()}`).emit(SocketEvents.SUBMISSION_VERDICT, fullPayload);
+
+  // Stripped payload for opponents (Public)
+  const publicPayload = {
+    submissionId: submission._id.toString(),
+    battleCode: battle.battleCode,
+    userId: user._id.toString(),
+    username: user.username,
+    verdict: finalStatus,
+    createdAt: (submission.submittedAt || new Date()).toISOString()
+  };
+
+  // Emit to everyone in the battle, but since the user gets the private one, they might receive both.
+  // The frontend can handle this by merging or overriding if it's their own submission.
+  // Actually, let's just emit the public one to the battle room.
+  io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.SUBMISSION_VERDICT, publicPayload);
 
   // 3. Evaluate Battle Win Condition
   if (battle.status === 'IN_PROGRESS' && finalStatus === 'ACCEPTED') {
@@ -109,6 +139,15 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
         );
 
         if (updatedBattle) {
+          // Clean up cache
+          await BattleCacheService.deleteBattle(battle.battleCode);
+
+          // Give winner some Elo points (simple test implementation)
+          const newElo = (user.elo || 1200) + 10;
+          user.elo = newElo;
+          if (user.save) await user.save();
+          await LeaderboardService.updateUserRank(user._id.toString(), newElo);
+
           // Winner Declared Event
           await BattleEvent.create({
             battleId: battle._id,
@@ -124,11 +163,11 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
           });
 
           // Emit Socket Events
-          io?.to(battle.battleCode).emit(SocketEvents.WINNER_DECLARED, {
+          io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.WINNER_DECLARED, {
             userId: user._id.toString(),
             username: user.username
           });
-          io?.to(battle.battleCode).emit(SocketEvents.BATTLE_COMPLETED, {
+          io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.BATTLE_COMPLETED, {
             battleCode: battle.battleCode
           });
         }

@@ -2,9 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { SocketEvents } from './events.js';
 import type { JoinRoomPayload, BattleStatePayload } from './socket.types.js';
 import { Battle } from '../battles/battle.model.js';
-
-// Global presence map: battleCode -> Set<userId>
-const battlePresence = new Map<string, Set<string>>();
+import { PresenceService } from '../../services/redis/PresenceService.js';
 
 // Track disconnect timeouts: userId -> NodeJS.Timeout
 const userDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
@@ -12,6 +10,11 @@ const userDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
 export const initializeBattleGateway = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     const user = (socket as any).user;
+    
+    // Join a private room for this user to receive sensitive direct messages (like full verdicts)
+    if (user && user._id) {
+      socket.join(`user_${user._id.toString()}`);
+    }
 
     socket.on(SocketEvents.JOIN_ROOM, async (payload: JoinRoomPayload) => {
       try {
@@ -32,14 +35,15 @@ export const initializeBattleGateway = (io: Server) => {
           userDisconnectTimeouts.delete(user._id.toString());
         }
 
-        // Update Presence
-        if (!battlePresence.has(battleCode)) {
-          battlePresence.set(battleCode, new Set());
-        }
+        // Update Presence via Redis
+        const userIdStr = user._id.toString();
+        const existingParticipants = await PresenceService.getActiveParticipants(battleCode);
+        const isNewJoin = !existingParticipants.includes(userIdStr);
         
-        const roomPresence = battlePresence.get(battleCode)!;
-        const isNewJoin = !roomPresence.has(user._id.toString());
-        roomPresence.add(user._id.toString());
+        await PresenceService.setPresence(battleCode, userIdStr);
+
+        // Fetch refreshed participants
+        const updatedParticipants = await PresenceService.getActiveParticipants(battleCode);
 
         // Emit Initial State Sync
         const statePayload: BattleStatePayload = {
@@ -48,7 +52,7 @@ export const initializeBattleGateway = (io: Server) => {
           battleType: battle.battleType,
           battleMode: battle.battleMode,
           creatorId: battle.creator._id.toString(),
-          participants: Array.from(roomPresence), // Currently online participants
+          participants: updatedParticipants,
         };
         
         if (battle.startTime) {
@@ -65,6 +69,11 @@ export const initializeBattleGateway = (io: Server) => {
           });
         }
 
+        // Heartbeat handler to refresh TTL
+        socket.on('presence_heartbeat', async () => {
+          await PresenceService.setPresence(battleCode, user._id.toString());
+        });
+
       } catch (error) {
         socket.emit(SocketEvents.ERROR, { message: 'Internal server error while joining room' });
       }
@@ -75,20 +84,16 @@ export const initializeBattleGateway = (io: Server) => {
       if (!battleCode) return;
 
       // 15 seconds grace period for network hiccups
-      const timeout = setTimeout(() => {
-        const roomPresence = battlePresence.get(battleCode);
-        if (roomPresence) {
-          roomPresence.delete(user._id.toString());
-          
-          if (roomPresence.size === 0) {
-            battlePresence.delete(battleCode);
-          } else {
-            // Broadcast user left
-            io.to(`battle_${battleCode}`).emit(SocketEvents.USER_LEFT, {
-              userId: user._id.toString()
-            });
-          }
-        }
+      const timeout = setTimeout(async () => {
+        await PresenceService.removePresence(battleCode, user._id.toString());
+        
+        const updatedParticipants = await PresenceService.getActiveParticipants(battleCode);
+        
+        // Broadcast user left
+        io.to(`battle_${battleCode}`).emit(SocketEvents.USER_LEFT, {
+          userId: user._id.toString()
+        });
+
         userDisconnectTimeouts.delete(user._id.toString());
       }, 15000);
 

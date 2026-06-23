@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { SocketEvents } from '../types/socket';
-import { BattleStatePayload, BattleStartedPayload, UserJoinedPayload, UserLeftPayload, BattleUpdatedPayload } from '../types/socket';
+import { BattleStatePayload, BattleStartedPayload, UserJoinedPayload, UserLeftPayload, BattleUpdatedPayload, SubmissionPendingPayload, SubmissionEvaluatedPayload, SubmissionVerdictPayload, WinnerDeclaredPayload, BattleCompletedPayload } from '../types/socket';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 
@@ -9,6 +9,8 @@ export const useBattleSocket = (battleCode: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [battle, setBattle] = useState<any>(null);
   const [participants, setParticipants] = useState<string[]>([]);
+  const [submissionHistory, setSubmissionHistory] = useState<(SubmissionPendingPayload | SubmissionEvaluatedPayload | SubmissionVerdictPayload)[]>([]);
+  const [winner, setWinner] = useState<WinnerDeclaredPayload | null>(null);
   
   const socketRef = useRef<Socket | null>(null);
 
@@ -40,10 +42,20 @@ export const useBattleSocket = (battleCode: string) => {
     socket.on('connect', () => {
       setIsConnected(true);
       socket.emit(SocketEvents.JOIN_ROOM, { battleCode });
+      
+      // Start heartbeat
+      const interval = setInterval(() => {
+        socket.emit('presence_heartbeat');
+      }, 15000); // 15 seconds
+      
+      (socket as any).heartbeatInterval = interval;
     });
 
     socket.on('disconnect', () => {
       setIsConnected(false);
+      if ((socket as any).heartbeatInterval) {
+        clearInterval((socket as any).heartbeatInterval);
+      }
     });
 
     socket.on(SocketEvents.BATTLE_STATE, (payload: BattleStatePayload) => {
@@ -82,6 +94,32 @@ export const useBattleSocket = (battleCode: string) => {
       toast.error(payload.reason || 'Battle was cancelled by host');
     });
 
+    socket.on(SocketEvents.SUBMISSION_PENDING, (payload: SubmissionPendingPayload) => {
+      setSubmissionHistory(prev => [...prev, payload]);
+    });
+
+    socket.on(SocketEvents.SUBMISSION_EVALUATED, (payload: SubmissionEvaluatedPayload) => {
+      setSubmissionHistory(prev => {
+        const filtered = prev.filter(s => (s as any).submissionId !== payload.submissionId);
+        return [...filtered, payload];
+      });
+    });
+
+    socket.on(SocketEvents.SUBMISSION_VERDICT, (payload: SubmissionVerdictPayload) => {
+      setSubmissionHistory(prev => {
+        const filtered = prev.filter(s => (s as any).submissionId !== payload.submissionId);
+        return [...filtered, payload];
+      });
+    });
+
+    socket.on(SocketEvents.WINNER_DECLARED, (payload: WinnerDeclaredPayload) => {
+      setWinner(payload);
+    });
+
+    socket.on(SocketEvents.BATTLE_COMPLETED, (payload: BattleCompletedPayload) => {
+      setBattle((prev: any) => prev ? { ...prev, status: 'COMPLETED' } : null);
+    });
+
     socket.on(SocketEvents.ERROR, (payload: any) => {
       toast.error(payload.message || 'Socket error occurred');
     });
@@ -107,6 +145,8 @@ export const useBattleSocket = (battleCode: string) => {
     isConnected,
     battle,
     participants,
+    submissionHistory,
+    winner,
     joinRoom
   };
 };

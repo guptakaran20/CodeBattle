@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { BattleGatewayService } from '../websockets/battle.gateway.js';
 import { getIO } from '../websockets/socket.service.js';
+import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
 
 const createBattleSchema = z.object({
   battleType: z.enum(['ONE_VS_ONE', 'TWO_VS_TWO', 'FOUR_VS_FOUR', 'TOURNAMENT']),
@@ -94,6 +95,8 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
           battle.result = { winReason: 'TIMEOUT' };
         }
         await battle.save();
+        
+        await BattleCacheService.deleteBattle(battle.battleCode);
         
         try {
           const io = getIO();
@@ -190,6 +193,13 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
     battle.status = 'IN_PROGRESS';
     battle.startTime = new Date();
     await battle.save();
+
+    await BattleCacheService.setBattle(battle.battleCode, {
+      status: battle.status,
+      participants: allMembers.length,
+      startTime: battle.startTime.toISOString(),
+      endTime: new Date(battle.startTime.getTime() + battle.durationMinutes * 60000).toISOString()
+    });
 
     await BattleEvent.create({
       battleId: battle._id,

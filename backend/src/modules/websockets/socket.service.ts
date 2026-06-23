@@ -4,6 +4,8 @@ import cookie from 'cookie';
 import jwt from 'jsonwebtoken';
 import { User } from '../users/user.model.js';
 import { initializeBattleGateway } from './battle.gateway.js';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { pubClient, subClient } from '../../config/redis.js';
 
 let io: SocketIOServer;
 
@@ -12,7 +14,8 @@ export const initializeSocket = (httpServer: HttpServer) => {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:3000',
       credentials: true
-    }
+    },
+    adapter: createAdapter(pubClient, subClient)
   });
 
   // Authentication Middleware

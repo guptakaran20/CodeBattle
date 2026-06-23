@@ -9,6 +9,7 @@ import { SubmissionProcessorFactory } from './processors/factory.js';
 import { Judge0Service, LANGUAGE_MAPPING } from './judge0.service.js';
 import { SocketEvents } from '../websockets/events.js';
 import { getIO } from '../websockets/socket.service.js';
+import { SubmissionCacheService } from '../../services/redis/SubmissionCacheService.js';
 
 const createSubmissionSchema = z.object({
   battleId: z.string(),
@@ -60,9 +61,15 @@ export const createSubmission = async (req: AuthenticatedRequest, res: Response,
     // Notify clients that submission is pending
     const io = getIO();
     const userObj = req.user as any; // Cast or fetch full user
-    io?.to(battle.battleCode).emit(SocketEvents.SUBMISSION_PENDING, {
+    io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.SUBMISSION_PENDING, {
+      submissionId: submission._id.toString(),
       userId: req.user.id,
       username: userObj.username || 'User' // Depending on JWT payload, might need fetch from DB if username is missing
+    });
+
+    // Cache the submission to avoid DB hits on polling
+    await SubmissionCacheService.setSubmission(submission._id.toString(), {
+      status: 'PENDING'
     });
 
     // Delegate to processor
@@ -139,6 +146,29 @@ export const getSubmissionsByBattle = async (req: AuthenticatedRequest, res: Res
       .sort({ submittedAt: -1 });
 
     return res.status(200).json({ success: true, data: { submissions } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSingleSubmission = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const submissionId = req.params.id as string;
+    
+    // Check Cache First
+    const cached = await SubmissionCacheService.getSubmission(submissionId);
+    if (cached) {
+      return res.status(200).json({ success: true, data: { submission: { _id: submissionId, ...cached } } });
+    }
+
+    // Fallback to DB
+    const submission = await Submission.findById(submissionId);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    // We can cache it if it's still pending, but usually if it's not in cache it's either finished or lost
+    return res.status(200).json({ success: true, data: { submission } });
   } catch (error) {
     next(error);
   }
