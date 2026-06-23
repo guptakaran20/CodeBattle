@@ -17,6 +17,15 @@ export enum SocketEvents {
   WINNER_DECLARED = "winnerDeclared",
   BATTLE_COMPLETED = "battleCompleted",
 
+  QUEUE_JOINED = "queueJoined",
+  QUEUE_LEFT = "queueLeft",
+  QUEUE_STATUS = "queueStatus",
+  MATCH_FOUND = "matchFound",
+
+  CHALLENGE_RECEIVED = "challengeReceived",
+  CHALLENGE_ACCEPTED = "challengeAccepted",
+  CHALLENGE_DECLINED = "challengeDeclined",
+
   ERROR = "error"
 }
 
@@ -97,4 +106,24 @@ export interface BattleCompletedPayload {
 
 export interface ErrorPayload {
   message: string;
+}
+
+export interface QueueStatusPayload {
+  queueTime: number;
+  eloRange: number;
+}
+
+export interface MatchFoundPayload {
+  battleCode: string;
+  opponentId: string;
+  difficulty: string;
+}
+
+export interface ChallengeReceivedPayload {
+  challengeId: string;
+  senderUsername: string;
+}
+
+export interface ChallengeAcceptedPayload {
+  challengeId: string;
 }

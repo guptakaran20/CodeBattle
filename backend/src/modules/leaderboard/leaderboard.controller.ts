@@ -23,7 +23,7 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
     const userIds = topEntries.map(e => e.userId);
     
     const users = await User.find({ _id: { $in: userIds } })
-      .select('username name avatar elo')
+      .select('username name avatar rating wins battlesPlayed')
       .lean();
 
     // Map the users back to the sorted order from Redis
@@ -31,10 +31,14 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
       const u = users.find(u => u._id.toString() === entry.userId);
       return {
         userId: entry.userId,
-        elo: entry.elo,
+        rating: entry.elo,
         username: u?.username || 'Unknown',
         name: u?.name || 'Unknown',
-        avatar: u?.avatar || null
+        avatar: u?.avatar || null,
+        wins: u?.wins || 0,
+        battlesPlayed: u?.battlesPlayed || 0,
+        streak: Math.floor(Math.random() * 15), // Mock streak for UI
+        topLangs: ['CPP', 'PYTHON', 'JAVA', 'RUST', 'GO'].sort(() => 0.5 - Math.random()).slice(0, 2) // Mock langs
       };
     });
 

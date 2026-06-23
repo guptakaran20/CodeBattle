@@ -13,7 +13,10 @@ import battleRoutes from './modules/battles/battle.routes.js';
 import submissionRoutes from './modules/submissions/submission.routes.js';
 import judge0Routes from './modules/submissions/judge0.routes.js';
 import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
+import matchmakingRoutes from './modules/matchmaking/matchmaking.routes.js';
+import statsRoutes from './modules/stats/stats.routes.js';
 import { initializeSocket } from './modules/websockets/socket.service.js';
+import { MatchmakingEngine } from './modules/matchmaking/matchmaking.engine.js';
 
 dotenv.config();
 
@@ -49,6 +52,8 @@ app.use('/api/battles', battleRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/judge0', judge0Routes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/matchmaking', matchmakingRoutes);
+app.use('/api/stats', statsRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: { status: 'ok', message: 'Backend is healthy' } });
@@ -59,4 +64,5 @@ app.use(globalErrorHandler);
 
 httpServer.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  MatchmakingEngine.start();
 });

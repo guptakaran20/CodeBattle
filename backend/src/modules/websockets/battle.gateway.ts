@@ -3,6 +3,7 @@ import { SocketEvents } from './events.js';
 import type { JoinRoomPayload, BattleStatePayload } from './socket.types.js';
 import { Battle } from '../battles/battle.model.js';
 import { PresenceService } from '../../services/redis/PresenceService.js';
+import { MatchmakingService } from '../../services/redis/MatchmakingService.js';
 
 // Track disconnect timeouts: userId -> NodeJS.Timeout
 const userDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
@@ -79,7 +80,13 @@ export const initializeBattleGateway = (io: Server) => {
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
+      // 1. Remove from matchmaking queue instantly
+      if (user && user._id) {
+        await MatchmakingService.leaveQueue(user._id.toString());
+      }
+
+      // 2. Handle battle presence disconnect
       const battleCode = (socket as any).currentBattleCode;
       if (!battleCode) return;
 

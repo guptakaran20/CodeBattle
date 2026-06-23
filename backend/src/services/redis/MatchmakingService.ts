@@ -1,41 +1,115 @@
 import { redis } from '../../config/redis.js';
 
-export class MatchmakingService {
-  private static readonly KEY = 'matchmaking:1v1';
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
+export interface PlayerQueueState {
+  elo: number;
+  joinedAt: number;
+  status: string;
+}
+
+export class MatchmakingService {
   /**
-   * Adds a user to the matchmaking queue with their current Elo score.
+   * Generates the ZSET key for a specific difficulty queue.
    */
-  static async joinQueue(userId: string, elo: number): Promise<void> {
-    await redis.zadd(this.KEY, elo, userId);
+  static getQueueKey(difficulty: Difficulty): string {
+    return `matchmaking:1v1:${difficulty}`;
   }
 
   /**
-   * Removes a user from the matchmaking queue.
+   * Generates the HASH key for a specific player's state.
+   */
+  static getPlayerStateKey(userId: string): string {
+    return `matchmaking:player:${userId}`;
+  }
+
+  /**
+   * Adds a user to the matchmaking queue for a specific difficulty.
+   */
+  static async joinQueue(userId: string, elo: number, difficulty: Difficulty): Promise<void> {
+    const queueKey = this.getQueueKey(difficulty);
+    const stateKey = this.getPlayerStateKey(userId);
+    const joinedAt = Date.now();
+
+    // Use a transaction pipeline to ensure both operations succeed
+    const pipeline = redis.pipeline();
+    
+    // Add to ZSET with Elo as score
+    pipeline.zadd(queueKey, elo, userId);
+    
+    // Store player state in HASH
+    pipeline.hset(stateKey, {
+      elo: elo.toString(),
+      joinedAt: joinedAt.toString(),
+      status: 'SEARCHING',
+      difficulty: difficulty
+    });
+
+    await pipeline.exec();
+  }
+
+  /**
+   * Removes a user from their queue and cleans up their state.
    */
   static async leaveQueue(userId: string): Promise<void> {
-    await redis.zrem(this.KEY, userId);
+    const stateKey = this.getPlayerStateKey(userId);
+    
+    // Find what difficulty they were queueing for
+    const difficultyStr = await redis.hget(stateKey, 'difficulty');
+    if (!difficultyStr) return; // Not in queue
+
+    const queueKey = this.getQueueKey(difficultyStr as Difficulty);
+
+    const pipeline = redis.pipeline();
+    pipeline.zrem(queueKey, userId);
+    pipeline.del(stateKey);
+    await pipeline.exec();
   }
 
   /**
-   * Finds potential opponents for a user within a specific Elo range.
-   * e.g., range = 100 means find players with Elo between (userElo - 100) and (userElo + 100).
+   * Gets a player's current queue state.
    */
-  static async findMatch(userId: string, userElo: number, range: number = 100): Promise<string | null> {
-    const min = userElo - range;
-    const max = userElo + range;
+  static async getPlayerState(userId: string): Promise<PlayerQueueState | null> {
+    const stateKey = this.getPlayerStateKey(userId);
+    const data = await redis.hgetall(stateKey);
+    
+    if (!data || Object.keys(data).length === 0) return null;
 
-    // Get members in range
-    const potentialOpponents = await redis.zrangebyscore(this.KEY, min, max);
+    return {
+      elo: parseInt(data.elo || '1500', 10),
+      joinedAt: parseInt(data.joinedAt || '0', 10),
+      status: data.status || 'SEARCHING'
+    };
+  }
 
-    // Filter out the requesting user
-    const opponents = potentialOpponents.filter((id: string) => id !== userId);
+  /**
+   * Calculates the dynamic search radius based on how long the user has been waiting.
+   * 0-30s -> ±100, 30-60s -> ±200, >60s -> ±300
+   */
+  static getDynamicSearchRadius(joinedAt: number): number {
+    const waitTimeSec = (Date.now() - joinedAt) / 1000;
+    if (waitTimeSec < 30) return 100;
+    if (waitTimeSec < 60) return 200;
+    return 300;
+  }
 
-    if (opponents.length > 0) {
-      // Pick the first valid opponent (simplest strategy for now)
-      return opponents[0] || null;
-    }
+  /**
+   * Retrieves all users currently in a specific queue.
+   */
+  static async getQueueMembers(difficulty: Difficulty): Promise<string[]> {
+    const queueKey = this.getQueueKey(difficulty);
+    return await redis.zrange(queueKey, 0, -1);
+  }
 
-    return null;
+  /**
+   * Finds potential opponents within a specific Elo range.
+   */
+  static async findOpponentsInRange(difficulty: Difficulty, userElo: number, radius: number, excludeUserId: string): Promise<string[]> {
+    const queueKey = this.getQueueKey(difficulty);
+    const min = userElo - radius;
+    const max = userElo + radius;
+
+    const potentialOpponents = await redis.zrangebyscore(queueKey, min, max);
+    return potentialOpponents.filter((id: string) => id !== excludeUserId);
   }
 }

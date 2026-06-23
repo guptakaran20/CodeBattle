@@ -1,12 +1,18 @@
 "use client";
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { AuthProvider } from '@/context/AuthContext';
+import { UIProvider } from '@/context/UIContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      {children}
+      <AuthProvider>
+        <UIProvider>
+          {children}
+        </UIProvider>
+      </AuthProvider>
     </GoogleOAuthProvider>
   );
 }

@@ -82,16 +82,25 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { credential } = req.body;
-    if (!credential) {
+    const { credential, accessToken: reqAccessToken } = req.body;
+    if (!credential && !reqAccessToken) {
       return res.status(400).json({ success: false, message: 'No credential provided', errorCode: 'AUTH_003' });
     }
 
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID as string,
-    });
-    const payload = ticket.getPayload();
+    let payload: any;
+    if (credential) {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID as string,
+      });
+      payload = ticket.getPayload();
+    } else if (reqAccessToken) {
+      const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${reqAccessToken}` }
+      });
+      payload = await resp.json();
+    }
+
     if (!payload || !payload.email) {
       return res.status(400).json({ success: false, message: 'Invalid token payload', errorCode: 'AUTH_004' });
     }
@@ -274,16 +283,25 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response, n
 
 export const forgotPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { credential, newPassword } = req.body;
-    if (!credential || !newPassword || newPassword.length < 6) {
+    const { credential, accessToken: reqAccessToken, newPassword } = req.body;
+    if ((!credential && !reqAccessToken) || !newPassword || newPassword.length < 6) {
       return res.status(400).json({ success: false, message: 'Missing fields or password too short', errorCode: 'AUTH_016' });
     }
 
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID as string,
-    });
-    const payload = ticket.getPayload();
+    let payload: any;
+    if (credential) {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID as string,
+      });
+      payload = ticket.getPayload();
+    } else if (reqAccessToken) {
+      const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${reqAccessToken}` }
+      });
+      payload = await resp.json();
+    }
+
     if (!payload || !payload.email) {
       return res.status(400).json({ success: false, message: 'Invalid Google token', errorCode: 'AUTH_004' });
     }
