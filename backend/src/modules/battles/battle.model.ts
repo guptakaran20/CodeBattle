@@ -24,6 +24,8 @@ export interface IBattle extends Document {
     winningTeamId?: string;
     winReason?: 'FIRST_ACCEPTED' | 'MOST_TESTS' | 'TIMEOUT' | 'MANUAL';
   };
+  tournamentId?: Types.ObjectId;
+  tournamentMatchId?: Types.ObjectId;
   startTime?: Date;
   endTime?: Date;
   createdAt: Date;
@@ -74,6 +76,8 @@ const battleSchema = new Schema<IBattle>(
     },
     startTime: { type: Date },
     endTime: { type: Date },
+    tournamentId: { type: Schema.Types.ObjectId, ref: 'Tournament' },
+    tournamentMatchId: { type: Schema.Types.ObjectId, ref: 'TournamentMatch' }
   },
   { timestamps: true }
 );

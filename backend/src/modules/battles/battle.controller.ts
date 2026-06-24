@@ -8,6 +8,8 @@ import { nanoid } from 'nanoid';
 import { BattleGatewayService } from '../websockets/battle.gateway.js';
 import { getIO } from '../websockets/socket.service.js';
 import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
+import { RatingService } from '../../services/ranking/RatingService.js';
+import { TournamentEngine } from '../tournaments/tournament.engine.js';
 
 const createBattleSchema = z.object({
   battleType: z.enum(['ONE_VS_ONE', 'TWO_VS_TWO', 'FOUR_VS_FOUR', 'TOURNAMENT']),
@@ -94,14 +96,20 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
         
         await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Timeout' });
         const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+        const ratingDeltas = await RatingService.updateBattleRatings(battle._id.toString(), null, participantIds, true);
         await ReplayService.createSummary(
           battle._id.toString(),
           null,
           participantIds,
           battle.startTime,
           new Date(),
-          'COMPLETED'
+          'COMPLETED',
+          ratingDeltas
         );
+        
+        if (battle.battleType === 'TOURNAMENT') {
+          await TournamentEngine.advanceWinner(battle._id.toString(), null).catch(console.error);
+        }
         
         await BattleCacheService.deleteBattle(battle.battleCode);
         

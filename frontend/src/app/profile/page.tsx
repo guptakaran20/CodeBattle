@@ -17,13 +17,15 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({ bio: '', college: '', country: '', name: '' });
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [recentBattles, setRecentBattles] = useState<any[]>([]);
+  const [ratingHistory, setRatingHistory] = useState<any[]>([]);
   const router = useRouter();
 
   const fetchProfile = async () => {
     try {
-      const [res, historyRes] = await Promise.all([
+      const [res, historyRes, ratingHistoryRes] = await Promise.all([
         api.get('/auth/me'),
-        api.get('/battles').catch(() => ({ data: { success: false } }))
+        api.get('/battles').catch(() => ({ data: { success: false } })),
+        api.get('/users/me/rating-history').catch(() => ({ data: { success: false } }))
       ]);
 
       if (res.data.success) {
@@ -39,6 +41,10 @@ export default function ProfilePage() {
 
       if (historyRes?.data?.success) {
         setRecentBattles(historyRes.data.data.battles.slice(0, 3));
+      }
+      
+      if (ratingHistoryRes?.data?.success) {
+        setRatingHistory(ratingHistoryRes.data.data.history || []);
       }
     } catch (error) {
       router.push('/login');
@@ -181,8 +187,8 @@ export default function ProfilePage() {
               <h2 className="text-2xl font-bold font-headline-lg">{user.name}</h2>
               <p className="text-primary font-code-sm font-semibold tracking-wider">@{user.username}</p>
               
-              <div className="inline-block mt-4 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-label-caps tracking-widest uppercase font-bold shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                {getRank(user.rating)}
+              <div className="inline-block mt-4 px-4 py-1.5 bg-primary/10 border border-primary/30 text-primary rounded-lg text-sm font-label-caps tracking-widest uppercase font-bold shadow-[0_0_10px_rgba(var(--primary),0.1)]">
+                {user.rank || 'Rookie'}
               </div>
             </div>
 
@@ -266,29 +272,89 @@ export default function ProfilePage() {
           <div className="bg-surface-container border border-surface-variant rounded-xl p-6 md:p-8 shadow-lg">
             <h2 className="font-headline-lg text-xl font-semibold border-b border-surface-variant pb-2 mb-6">Combat Statistics</h2>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-primary transition-colors">
-                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-primary transition-colors">Rating</span>
+                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-primary transition-colors">Current Rating</span>
                 <span className="font-headline-lg text-3xl font-bold text-on-surface">{user.rating}</span>
               </div>
+              <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-amber-500 transition-colors">
+                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-amber-500 transition-colors">Peak Rating</span>
+                <span className="font-headline-lg text-3xl font-bold text-amber-500">{user.peakRating || user.rating}</span>
+              </div>
               <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-emerald-500 transition-colors">
-                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-emerald-500 transition-colors">Wins</span>
-                <span className="font-headline-lg text-3xl font-bold text-emerald-400">{user.statistics?.wins || 0}</span>
+                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-emerald-500 transition-colors">Win Rate</span>
+                <span className="font-headline-lg text-3xl font-bold text-emerald-400">
+                  {user.battlesPlayed > 0 ? Math.round((user.wins / user.battlesPlayed) * 100) : 0}%
+                </span>
+              </div>
+              <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-surface-bright transition-colors">
+                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1">Total Wins</span>
+                <span className="font-headline-lg text-3xl font-bold text-on-surface">{user.wins || 0}</span>
               </div>
               <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-error transition-colors">
-                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-error transition-colors">Losses</span>
-                <span className="font-headline-lg text-3xl font-bold text-error">{(user.statistics?.totalBattles || 0) - (user.statistics?.wins || 0)}</span>
+                <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1 group-hover:text-error transition-colors">Total Losses</span>
+                <span className="font-headline-lg text-3xl font-bold text-error">{user.losses || 0}</span>
               </div>
               <div className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:border-surface-bright transition-colors">
                 <span className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant mb-1">Draws</span>
-                <span className="font-headline-lg text-3xl font-bold text-on-surface">{user.statistics?.draws || 0}</span>
+                <span className="font-headline-lg text-3xl font-bold text-on-surface">{user.draws || 0}</span>
               </div>
             </div>
 
             <div className="mt-6 pt-6 border-t border-surface-variant flex justify-between items-center">
               <p className="font-label-caps text-xs font-semibold tracking-widest uppercase text-on-surface-variant">Total Engagements</p>
-              <p className="font-headline-lg text-2xl font-bold">{user.statistics?.totalBattles || 0}</p>
+              <p className="font-headline-lg text-2xl font-bold">{user.battlesPlayed || 0}</p>
             </div>
+          </div>
+
+          <div className="bg-surface-container border border-surface-variant rounded-xl p-6 md:p-8 shadow-lg">
+            <h2 className="font-headline-lg text-xl font-semibold border-b border-surface-variant pb-2 mb-6">Rating History</h2>
+            {ratingHistory.length < 2 ? (
+              <p className="text-on-surface-variant text-sm">Not enough battle history to generate a rating graph.</p>
+            ) : (
+              <div className="w-full h-48 relative mt-4">
+                {(() => {
+                  const points = ratingHistory.map(r => r.newRating);
+                  const min = Math.min(...points) - 50;
+                  const max = Math.max(...points) + 50;
+                  const range = max - min;
+                  const w = 100; // viewbox 100x100 percentage based logic
+                  const h = 100;
+                  
+                  const stepX = w / (points.length - 1);
+                  
+                  const coordinates = points.map((p, i) => {
+                    const x = i * stepX;
+                    const y = h - ((p - min) / range) * h;
+                    return `${x},${y}`;
+                  }).join(' ');
+                  
+                  return (
+                    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-[0_0_10px_rgba(var(--primary),0.3)]" preserveAspectRatio="none">
+                      <polyline
+                        fill="none"
+                        stroke="var(--primary)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        points={coordinates}
+                      />
+                      {points.map((p, i) => {
+                        const x = i * stepX;
+                        const y = h - ((p - min) / range) * h;
+                        return (
+                          <circle key={i} cx={x} cy={y} r="1.5" fill="var(--surface-container)" stroke="var(--primary)" strokeWidth="0.5" />
+                        );
+                      })}
+                    </svg>
+                  );
+                })()}
+                <div className="flex justify-between text-[10px] font-code-sm text-on-surface-variant mt-4">
+                  <span>Earliest</span>
+                  <span>Latest</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-surface-container border border-surface-variant rounded-xl p-6 md:p-8 shadow-lg">

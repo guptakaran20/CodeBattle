@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@monaco-editor/react": "^4.7.0",
     "@react-oauth/google": "^0.13.5",
     "@tailwindcss/typography": "^0.5.20",

@@ -10,6 +10,7 @@ export interface IUser extends Document {
   isGoogleVerified: boolean;
   role: 'USER' | 'ADMIN';
   rating: number;
+  peakRating: number;
   rank: string;
   wins: number;
   losses: number;
@@ -35,6 +36,7 @@ const UserSchema = new Schema<IUser>(
     isGoogleVerified: { type: Boolean, default: false },
     role: { type: String, enum: ['USER', 'ADMIN'], default: 'USER' },
     rating: { type: Number, default: 1000 },
+    peakRating: { type: Number, default: 1000 },
     rank: { type: String, default: 'Rookie' },
     wins: { type: Number, default: 0 },
     losses: { type: Number, default: 0 },

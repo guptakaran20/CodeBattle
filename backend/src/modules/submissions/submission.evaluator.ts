@@ -6,6 +6,8 @@ import { SocketEvents } from '../websockets/events.js';
 import { SubmissionCacheService } from '../../services/redis/SubmissionCacheService.js';
 import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
 import { LeaderboardService } from '../../services/redis/LeaderboardService.js';
+import { RatingService } from '../../services/ranking/RatingService.js';
+import { TournamentEngine } from '../tournaments/tournament.engine.js';
 
 export const evaluateSubmissionResult = async (submissionId: string, judge0Results: any[]) => {
   const submission = await Submission.findById(submissionId).populate('user');
@@ -146,26 +148,31 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
           // Clean up cache
           await BattleCacheService.deleteBattle(battle.battleCode);
 
-          // Give winner some Elo points (simple test implementation)
-          const newElo = (user.elo || 1200) + 10;
-          user.elo = newElo;
-          if (user.save) await user.save();
-          await LeaderboardService.updateUserRank(user._id.toString(), newElo);
+          // Apply Rating Engine Math
+          const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+          const ratingDeltas = await RatingService.updateBattleRatings(battle._id.toString(), user._id.toString(), participantIds, false);
 
           // Player Won Event
           await ReplayService.logEvent(battle._id.toString(), 'PlayerWon', { userId: user._id });
 
           // Battle Completed Event
           await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'First Accepted' });
-          const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
           await ReplayService.createSummary(
             battle._id.toString(),
             user._id.toString(),
             participantIds,
             battle.startTime || new Date(),
             new Date(),
-            'COMPLETED'
+            'COMPLETED',
+            ratingDeltas
           );
+
+          // Advance tournament if applicable
+          if (updatedBattle.battleType === 'TOURNAMENT') {
+            await TournamentEngine.advanceWinner(battle._id.toString(), user._id.toString()).catch(err => {
+              console.error("Tournament Engine Error:", err);
+            });
+          }
 
           // Emit Socket Events
           io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.WINNER_DECLARED, {

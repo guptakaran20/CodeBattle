@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { LeaderboardService } from '../../services/redis/LeaderboardService.js';
 import { User } from '../users/user.model.js';
+import { RatingService } from '../../services/ranking/RatingService.js';
 
 export const getLeaderboard = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -31,7 +32,7 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
       const u = users.find(u => u._id.toString() === entry.userId);
       return {
         userId: entry.userId,
-        rating: entry.elo,
+        rating: entry.rating,
         username: u?.username || 'Unknown',
         name: u?.name || 'Unknown',
         avatar: u?.avatar || null,
@@ -43,6 +44,15 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
     });
 
     return res.status(200).json({ success: true, data: { leaderboard } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRanks = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ranks = RatingService.getRankBoundaries();
+    return res.status(200).json({ success: true, data: { ranks } });
   } catch (error) {
     next(error);
   }

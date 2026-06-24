@@ -9,6 +9,12 @@ export interface IBattleReplay extends Document {
   startedAt: Date;
   endedAt: Date;
   finalStatus: string;
+  ratingDeltas?: Array<{
+    userId: Types.ObjectId;
+    ratingBefore: number;
+    ratingAfter: number;
+    delta: number;
+  }>;
 }
 
 const battleReplaySchema = new Schema<IBattleReplay>({
@@ -19,7 +25,13 @@ const battleReplaySchema = new Schema<IBattleReplay>({
   totalSubmissions: { type: Number, default: 0 },
   startedAt: { type: Date, required: true },
   endedAt: { type: Date, required: true },
-  finalStatus: { type: String, required: true }
+  finalStatus: { type: String, required: true },
+  ratingDeltas: [{
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    ratingBefore: Number,
+    ratingAfter: Number,
+    delta: Number
+  }]
 }, { timestamps: true });
 
 export const BattleReplay = mongoose.model<IBattleReplay>('BattleReplay', battleReplaySchema);

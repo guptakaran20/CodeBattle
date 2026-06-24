@@ -51,7 +51,8 @@ export class ReplayService {
     participantIds: string[],
     startedAt: Date,
     endedAt: Date,
-    finalStatus: string
+    finalStatus: string,
+    ratingDeltas?: any[]
   ) {
     try {
       const durationSeconds = Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000);
@@ -70,7 +71,8 @@ export class ReplayService {
         totalSubmissions,
         startedAt,
         endedAt,
-        finalStatus
+        finalStatus,
+        ratingDeltas
       });
       await summary.save();
       return summary;

@@ -3,7 +3,7 @@ import { User } from '../../modules/users/user.model.js';
 
 export interface LeaderboardEntry {
   userId: string;
-  elo: number;
+  rating: number;
 }
 
 export class LeaderboardService {
@@ -11,10 +11,10 @@ export class LeaderboardService {
 
   /**
    * Updates a user's rank in the Redis sorted set.
-   * Score = Elo rating.
+   * Score = rating.
    */
-  static async updateUserRank(userId: string, elo: number): Promise<void> {
-    await redis.zadd(this.KEY, elo, userId);
+  static async updateUserRank(userId: string, rating: number): Promise<void> {
+    await redis.zadd(this.KEY, rating, userId);
   }
 
   /**
@@ -29,7 +29,7 @@ export class LeaderboardService {
     for (let i = 0; i < data.length; i += 2) {
       entries.push({
         userId: data[i] || '',
-        elo: parseInt(data[i + 1] || '0', 10)
+        rating: parseInt(data[i + 1] || '0', 10)
       });
     }
     
@@ -42,7 +42,7 @@ export class LeaderboardService {
    */
   static async rebuildLeaderboard(): Promise<void> {
     console.log('Rebuilding leaderboard from MongoDB...');
-    const users = await User.find({}).select('_id elo').lean();
+    const users = await User.find({}).select('_id rating').lean();
     
     if (users.length === 0) return;
 
@@ -51,9 +51,8 @@ export class LeaderboardService {
     pipeline.del(this.KEY); // Clear existing
 
     for (const user of users) {
-      // Default elo to 1200 if not present
-      const elo = (user as any).elo || 1200;
-      pipeline.zadd(this.KEY, elo, user._id.toString());
+      const rating = user.rating || 1000;
+      pipeline.zadd(this.KEY, rating, user._id.toString());
     }
 
     await pipeline.exec();

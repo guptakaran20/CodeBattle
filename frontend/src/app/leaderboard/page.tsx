@@ -1,40 +1,33 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
-import { useUI } from '@/context/UIContext';
+import Link from 'next/link';
 
-export default function Leaderboard() {
+interface LeaderboardPlayer {
+  userId: string;
+  rating: number;
+  username: string;
+  name: string;
+  avatar: string | null;
+  wins: number;
+  battlesPlayed: number;
+  streak: number;
+}
+
+export default function LeaderboardPage() {
+  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { setSidebarVisible } = useUI();
-  const router = useRouter();
 
-  // Protect route
-  useEffect(() => {
-    // Leaderboard is public, no auth redirect needed here
-  }, []);
-
-  // Hide sidebar
-  useEffect(() => {
-    setSidebarVisible(false);
-    return () => setSidebarVisible(true);
-  }, [setSidebarVisible]);
-
-  // Fetch data
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await api.get('/leaderboard');
+        const res = await api.get('/leaderboard?limit=100');
         if (res.data.success) {
-          setLeaderboard(res.data.data?.leaderboard || []);
+          setPlayers(res.data.data.leaderboard);
         }
-      } catch (e) {
-        console.error('Failed to load leaderboard', e);
+      } catch (error) {
+        console.error('Failed to load leaderboard', error);
       } finally {
         setLoading(false);
       }
@@ -42,277 +35,117 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, []);
 
-  const calculateWinRate = (wins: number, played: number) => {
-    if (!played || played === 0) return 0;
-    return Math.round((wins / played) * 100);
+  const getRankColor = (rank: number) => {
+    if (rank === 1) return 'text-amber-400 border-amber-400/50 bg-amber-400/10 shadow-[0_0_15px_rgba(251,191,36,0.3)]';
+    if (rank === 2) return 'text-slate-300 border-slate-300/50 bg-slate-300/10 shadow-[0_0_15px_rgba(203,213,225,0.2)]';
+    if (rank === 3) return 'text-amber-700 border-amber-700/50 bg-amber-700/10 shadow-[0_0_15px_rgba(180,83,9,0.2)]';
+    return 'text-on-surface-variant border-surface-variant bg-surface-container';
   };
 
-  const getRankBadge = (rank: number) => {
-    return rank.toString().padStart(2, '0');
+  const getPodiumHeight = (rank: number) => {
+    if (rank === 1) return 'h-48 md:h-56';
+    if (rank === 2) return 'h-40 md:h-48';
+    if (rank === 3) return 'h-32 md:h-40';
+    return 'h-24';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24 px-4 flex justify-center items-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const top3 = [players[1], players[0], players[2]].filter(Boolean);
+  const rest = players.slice(3);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-on-surface flex flex-col">
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 space-y-16 animate-in fade-in duration-700">
-        
-        {/* Header (No Subtitle, No Filters as requested) */}
-        <div className="flex flex-col items-start gap-2 pt-6">
-          <h1 className="text-4xl font-headline-lg font-bold text-on-surface">Global Leaderboard</h1>
-        </div>
+    <div className="min-h-screen pt-24 pb-12 px-4 md:px-8 max-w-6xl mx-auto">
+      <div className="text-center mb-12">
+        <h1 className="font-headline text-4xl md:text-5xl font-bold text-on-surface mb-4 tracking-tight">Global Leaderboard</h1>
+        <p className="text-on-surface-variant max-w-2xl mx-auto">The most elite gladiators in the Arena. Rankings are calculated using a strict Elo rating system after every battle.</p>
+      </div>
 
-        {/* Top 3 Podium */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 pt-8">
-          {loading ? (
-            [2, 1, 3].map(i => <Skeleton key={i} className={`w-full md:w-72 bg-surface border-surface-variant ${i===1 ? 'h-[26rem]' : 'h-96'}`} />)
-          ) : (
-            <>
-              {/* Rank 2 (Silver) */}
-              {leaderboard[1] && (
-                <div className="w-full md:w-80 bg-surface border border-surface-variant rounded-xl flex flex-col items-center py-10 order-2 md:order-1 relative mt-12 md:mt-16">
-                  {/* Badge */}
-                  <div className="absolute -top-6 bg-surface border-2 border-surface-variant text-surface-variant-bright w-14 h-14 rounded-full flex items-center justify-center font-headline-lg font-bold text-2xl shadow-lg">
-                    <span className="bg-gradient-to-b from-slate-300 to-slate-500 bg-clip-text text-transparent">2</span>
-                  </div>
-                  
-                  {/* Avatar */}
-                  <div className="w-24 h-24 rounded-full bg-surface-variant p-1 mt-4 mb-6 shadow-[0_0_20px_rgba(148,163,184,0.15)]">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-surface-container flex items-center justify-center border-2 border-slate-400">
-                       {leaderboard[1].avatar ? (
-                         <img src={leaderboard[1].avatar} alt={leaderboard[1].username} className="w-full h-full object-cover" />
-                       ) : (
-                         <span className="text-2xl font-bold text-slate-400">{leaderboard[1].username.charAt(0).toUpperCase()}</span>
-                       )}
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-2xl font-bold font-headline-lg mb-2">{leaderboard[1].username}</h2>
-                  <div className="flex items-center gap-2 text-on-surface-variant font-code-sm mb-6">
-                    <span className="material-symbols-outlined text-[16px] text-slate-300">diamond</span>
-                    <span><span className="text-on-surface font-bold">{leaderboard[1].rating.toLocaleString()}</span> ELO</span>
-                  </div>
+      {/* Podium Section */}
+      {top3.length > 0 && (
+        <div className="flex justify-center items-end gap-2 md:gap-6 mb-24 px-2 mt-8">
+          {top3.map((player, idx) => {
+            let rank = 2;
+            if (idx === 1) rank = 1;
+            if (idx === 2) rank = 3;
 
-                  <div className="flex gap-3 mb-8">
-                    {(leaderboard[1].topLangs || []).map((lang: string) => (
-                      <span key={lang} className="px-3 py-1 bg-surface-container border border-surface-variant rounded text-[10px] font-label-caps tracking-widest text-on-surface-variant">
-                        {lang}
-                      </span>
-                    ))}
+            return (
+              <div key={player.userId} className={`flex flex-col items-center w-28 md:w-40 relative group`}>
+                <div className="absolute -top-20 md:-top-24 flex flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
+                  <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full border-2 ${getRankColor(rank).split(' ')[1]} flex items-center justify-center font-bold text-2xl uppercase bg-surface-container overflow-hidden`}>
+                    {player.avatar ? <img src={player.avatar} alt={player.username} className="w-full h-full object-cover" /> : player.username.charAt(0)}
                   </div>
-
-                  <div className="w-full flex justify-around px-8 border-t border-surface-variant pt-6">
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">WINS</span>
-                        <span className="font-code-md text-lg text-on-surface">{leaderboard[1].wins || 0}</span>
-                     </div>
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">STREAK</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-code-md text-lg text-primary">{leaderboard[1].streak || 0}</span>
-                          <span className="text-orange-500">🔥</span>
-                        </div>
-                     </div>
-                  </div>
+                  <Link href={`/u/${player.username}`} className="mt-2 font-bold text-sm md:text-base text-on-surface hover:text-primary transition-colors truncate w-full text-center">
+                    {player.username}
+                  </Link>
+                  <div className="text-xs md:text-sm font-code-sm text-primary font-bold mt-1">{player.rating} RTG</div>
                 </div>
-              )}
-              
-              {/* Rank 1 (Gold) */}
-              {leaderboard[0] && (
-                <div className="w-full md:w-96 bg-surface border-t-2 border-[#ffc174] border-x border-b border-surface-variant rounded-xl flex flex-col items-center py-12 order-1 md:order-2 relative shadow-[0_0_40px_rgba(255,193,116,0.05)]">
-                  {/* Gold Glow Top */}
-                  <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#ffc174]/10 to-transparent rounded-t-xl" />
-                  
-                  {/* Badge */}
-                  <div className="absolute -top-8 bg-surface border-2 border-[#ffc174]/50 text-[#ffc174] w-20 h-20 rounded-full flex items-center justify-center font-headline-lg font-bold text-4xl shadow-[0_0_20px_rgba(255,193,116,0.2)]">
-                    <span className="bg-gradient-to-b from-[#ffefdb] to-[#ffc174] bg-clip-text text-transparent">1</span>
-                  </div>
-                  
-                  {/* Avatar */}
-                  <div className="w-32 h-32 rounded-full bg-surface-variant p-1 mt-6 mb-6 shadow-[0_0_30px_rgba(255,193,116,0.2)] relative z-10">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-surface-container flex items-center justify-center border-2 border-[#ffc174]">
-                       {leaderboard[0].avatar ? (
-                         <img src={leaderboard[0].avatar} alt={leaderboard[0].username} className="w-full h-full object-cover" />
-                       ) : (
-                         <span className="text-3xl font-bold text-[#ffc174]">{leaderboard[0].username.charAt(0).toUpperCase()}</span>
-                       )}
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-3xl font-bold font-headline-lg mb-2 relative z-10">{leaderboard[0].username}</h2>
-                  <div className="flex items-center gap-2 text-[#ffc174] font-code-sm mb-6 relative z-10">
-                    <span className="material-symbols-outlined text-[18px]">diamond</span>
-                    <span><span className="font-bold text-lg">{leaderboard[0].rating.toLocaleString()}</span> ELO</span>
-                  </div>
-
-                  <div className="flex gap-3 mb-10 relative z-10">
-                    {(leaderboard[0].topLangs || []).map((lang: string) => (
-                      <span key={lang} className="px-3 py-1 bg-surface-container border border-surface-variant rounded text-[10px] font-label-caps tracking-widest text-on-surface-variant">
-                        {lang}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="w-full flex justify-around px-8 border-t border-surface-variant pt-6 relative z-10">
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">WINS</span>
-                        <span className="font-code-md text-xl text-on-surface">{leaderboard[0].wins || 0}</span>
-                     </div>
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">STREAK</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-code-md text-xl text-primary">{leaderboard[0].streak || 0}</span>
-                          <span className="text-orange-500">🔥</span>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Rank 3 (Bronze) */}
-              {leaderboard[2] && (
-                <div className="w-full md:w-80 bg-surface border border-surface-variant rounded-xl flex flex-col items-center py-10 order-3 md:order-3 relative mt-12 md:mt-16">
-                  {/* Badge */}
-                  <div className="absolute -top-6 bg-surface border-2 border-surface-variant text-surface-variant-bright w-14 h-14 rounded-full flex items-center justify-center font-headline-lg font-bold text-2xl shadow-lg">
-                    <span className="bg-gradient-to-b from-amber-600 to-amber-800 bg-clip-text text-transparent">3</span>
-                  </div>
-                  
-                  {/* Avatar */}
-                  <div className="w-24 h-24 rounded-full bg-surface-variant p-1 mt-4 mb-6 shadow-[0_0_20px_rgba(217,119,6,0.1)]">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-surface-container flex items-center justify-center border-2 border-amber-700">
-                       {leaderboard[2].avatar ? (
-                         <img src={leaderboard[2].avatar} alt={leaderboard[2].username} className="w-full h-full object-cover" />
-                       ) : (
-                         <span className="text-2xl font-bold text-amber-700">{leaderboard[2].username.charAt(0).toUpperCase()}</span>
-                       )}
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-2xl font-bold font-headline-lg mb-2">{leaderboard[2].username}</h2>
-                  <div className="flex items-center gap-2 text-on-surface-variant font-code-sm mb-6">
-                    <span className="material-symbols-outlined text-[16px] text-primary">diamond</span>
-                    <span><span className="text-on-surface font-bold">{leaderboard[2].rating.toLocaleString()}</span> ELO</span>
-                  </div>
-
-                  <div className="flex gap-3 mb-8">
-                    {(leaderboard[2].topLangs || []).map((lang: string) => (
-                      <span key={lang} className="px-3 py-1 bg-surface-container border border-surface-variant rounded text-[10px] font-label-caps tracking-widest text-on-surface-variant">
-                        {lang}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="w-full flex justify-around px-8 border-t border-surface-variant pt-6">
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">WINS</span>
-                        <span className="font-code-md text-lg text-on-surface">{leaderboard[2].wins || 0}</span>
-                     </div>
-                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-label-caps uppercase tracking-widest text-on-surface-variant mb-1">STREAK</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-code-md text-lg text-primary">{leaderboard[2].streak || 0}</span>
-                          <span className="text-orange-500">🔥</span>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Rest of Leaderboard Table */}
-        <div className="bg-[#0e0e11] border border-surface-variant rounded-xl overflow-hidden mt-16">
-          <div className="grid grid-cols-12 px-8 py-5 border-b border-surface-variant text-[11px] font-label-caps text-on-surface-variant uppercase tracking-widest">
-            <div className="col-span-1">Rank</div>
-            <div className="col-span-4">Gladiator</div>
-            <div className="col-span-3 text-center">Rating (ELO)</div>
-            <div className="col-span-3 text-center">Win Rate</div>
-            <div className="col-span-1 text-right">Top Lang</div>
-          </div>
-          <div className="divide-y divide-surface-variant/50">
-            {loading ? (
-              Array(5).fill(0).map((_, i) => (
-                <div key={i} className="p-6 grid grid-cols-12"><Skeleton className="col-span-12 h-6 bg-surface-variant" /></div>
-              ))
-            ) : (
-              leaderboard.slice(3).map((lbUser, idx) => {
-                const rank = idx + 4;
-                const isCurrentUser = user && user.id === lbUser.userId;
-                const winRate = calculateWinRate(lbUser.wins, lbUser.battlesPlayed);
-                const topLang = (lbUser.topLangs && lbUser.topLangs.length > 0) ? lbUser.topLangs[0] : '--';
                 
-                return (
-                  <div key={idx} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-surface-variant/20 transition-colors">
-                    {/* Rank */}
-                    <div className={`col-span-1 font-code-md font-bold ${isCurrentUser ? 'text-[#ffc174]' : 'text-on-surface-variant'}`}>
-                      {getRankBadge(rank)}
-                    </div>
-                    
-                    {/* Gladiator */}
-                    <div className="col-span-4 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-container flex items-center justify-center border border-surface-variant">
-                         {lbUser.avatar ? (
-                           <img src={lbUser.avatar} alt={lbUser.username} className="w-full h-full object-cover" />
-                         ) : (
-                           <span className="text-xs font-bold text-on-surface-variant">{lbUser.username.charAt(0).toUpperCase()}</span>
-                         )}
-                      </div>
-                      <span className={`font-semibold ${isCurrentUser ? 'text-on-surface' : 'text-on-surface-variant'}`}>
-                         {lbUser.username} {isCurrentUser && '(Current)'}
-                      </span>
-                    </div>
-                    
-                    {/* Rating */}
-                    <div className="col-span-3 text-center font-code-md font-bold text-primary">
-                      {lbUser.rating.toLocaleString()}
-                    </div>
-                    
-                    {/* Win Rate */}
-                    <div className="col-span-3 px-4 flex flex-col items-center gap-1.5">
-                       <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
-                          <div className="h-full bg-[#ffc174]" style={{ width: `${winRate}%` }} />
-                       </div>
-                       <span className="text-[11px] font-code-sm text-on-surface-variant">{winRate}%</span>
-                    </div>
-                    
-                    {/* Top Lang */}
-                    <div className="col-span-1 text-right font-code-sm text-[11px] text-on-surface-variant uppercase tracking-wider">
-                      {topLang}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            
-            {!loading && leaderboard.length <= 3 && (
-               <div className="p-12 text-center text-on-surface-variant italic">
-                  Not enough gladiators ranked yet.
-               </div>
-            )}
-          </div>
-          
-          {!loading && leaderboard.length > 3 && (
-            <div className="w-full py-5 border-t border-surface-variant text-center cursor-pointer hover:bg-surface-variant/20 transition-colors">
-               <span className="text-[11px] font-label-caps uppercase tracking-widest text-[#ffc174] font-bold">Load More Gladiators ⌄</span>
-            </div>
-          )}
+                <div className={`w-full ${getPodiumHeight(rank)} ${getRankColor(rank)} border-t-2 border-l border-r rounded-t-xl flex justify-center items-start pt-4 transition-all duration-300 group-hover:brightness-110`}>
+                  <span className="font-headline font-black text-3xl md:text-5xl opacity-80">#{rank}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </main>
+      )}
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-surface-variant py-8 px-8 bg-[#0a0a0c]">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex flex-col gap-2">
-               <div className="font-headline-lg font-bold text-lg">CODEARENA</div>
-               <div className="text-xs font-code-sm text-on-surface-variant">© 2024 CodeArena. All rights reserved.</div>
-            </div>
-            <div className="flex items-center gap-6 text-[11px] font-code-sm text-on-surface-variant">
-               <a href="#" className="hover:text-on-surface transition-colors">System Status</a>
-               <a href="#" className="hover:text-on-surface transition-colors">Terms</a>
-               <a href="#" className="hover:text-on-surface transition-colors">Privacy</a>
-               <a href="#" className="hover:text-on-surface transition-colors">Security</a>
-            </div>
-         </div>
-      </footer>
+      {/* Full Rankings Table */}
+      {rest.length > 0 && (
+        <div className="bg-surface-container border border-surface-variant rounded-xl overflow-hidden shadow-lg">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-surface-container-high border-b border-surface-variant">
+                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant tracking-widest uppercase">Rank</th>
+                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant tracking-widest uppercase">Gladiator</th>
+                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant tracking-widest uppercase text-right">Win Rate</th>
+                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant tracking-widest uppercase text-right">Battles</th>
+                  <th className="py-4 px-6 font-code-sm text-xs text-primary tracking-widest uppercase text-right">Rating</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-variant">
+                {rest.map((player, i) => {
+                  const rank = i + 4;
+                  const winRate = player.battlesPlayed > 0 ? Math.round((player.wins / player.battlesPlayed) * 100) : 0;
+                  return (
+                    <tr key={player.userId} className="hover:bg-surface-container-high transition-colors">
+                      <td className="py-4 px-6 text-on-surface-variant font-code-sm">#{rank}</td>
+                      <td className="py-4 px-6">
+                        <Link href={`/u/${player.username}`} className="flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-surface-variant group-hover:border-primary transition-colors">
+                            {player.avatar ? <img src={player.avatar} alt={player.username} className="w-full h-full object-cover" /> : player.username.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{player.username}</div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="py-4 px-6 text-right text-sm text-on-surface-variant">{winRate}%</td>
+                      <td className="py-4 px-6 text-right text-sm text-on-surface-variant">{player.battlesPlayed}</td>
+                      <td className="py-4 px-6 text-right font-code-sm text-primary font-bold">{player.rating}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {players.length === 0 && (
+        <div className="text-center py-24 bg-surface-container rounded-xl border border-surface-variant mt-8">
+          <div className="material-symbols-outlined text-[48px] text-on-surface-variant mb-4">sports_score</div>
+          <h3 className="text-xl font-bold text-on-surface mb-2">No Gladiators Yet</h3>
+          <p className="text-on-surface-variant">The arena is empty. Be the first to battle!</p>
+        </div>
+      )}
     </div>
   );
 }
