@@ -1,5 +1,5 @@
 import { Submission } from './submission.model.js';
-import { BattleEvent } from '../battles/battleEvent.model.js';
+import { ReplayService } from '../replays/replay.service.js';
 import { Battle } from '../battles/battle.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
@@ -70,10 +70,14 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
   await SubmissionCacheService.updateStatus(submission._id.toString(), finalStatus, finalStatus === 'ACCEPTED');
 
   // 1. Create Event
-  await BattleEvent.create({
-    battleId: submission.battle,
-    eventType: 'SubmissionEvaluated',
-    payload: { userId: submission.user._id, submissionId: submission._id, status: finalStatus }
+  await ReplayService.logEvent(submission.battle.toString(), finalStatus === 'ACCEPTED' ? 'SubmissionAccepted' : finalStatus, { 
+    userId: submission.user._id, 
+    submissionId: submission._id,
+    language: submission.language,
+    executionTime: totalExecutionTime,
+    memory: maxMemory,
+    passedTests,
+    totalTests: submission.totalTests
   });
 
   const user = submission.user as any;
@@ -148,19 +152,20 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
           if (user.save) await user.save();
           await LeaderboardService.updateUserRank(user._id.toString(), newElo);
 
-          // Winner Declared Event
-          await BattleEvent.create({
-            battleId: battle._id,
-            eventType: 'WinnerDeclared',
-            payload: { userId: user._id }
-          });
+          // Player Won Event
+          await ReplayService.logEvent(battle._id.toString(), 'PlayerWon', { userId: user._id });
 
           // Battle Completed Event
-          await BattleEvent.create({
-            battleId: battle._id,
-            eventType: 'BattleCompleted',
-            payload: { battleCode: battle.battleCode }
-          });
+          await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'First Accepted' });
+          const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+          await ReplayService.createSummary(
+            battle._id.toString(),
+            user._id.toString(),
+            participantIds,
+            battle.startTime || new Date(),
+            new Date(),
+            'COMPLETED'
+          );
 
           // Emit Socket Events
           io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.WINNER_DECLARED, {

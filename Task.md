@@ -167,9 +167,9 @@ Deliverables:
   - `[x]` Update Battle Lobby UI to reflect live changes
 
 # Phase 4 Tasks
-- `[/]` Task 4.1: Judge0 Infrastructure
-- `[ ]` Task 4.2: Submission Lifecycle & Processors
-- `[ ]` Task 4.3: Frontend Coding Arena
+- `[x]` Task 4.1: Judge0 Infrastructure
+- `[x]` Task 4.2: Submission Lifecycle & Processors
+- `[x]` Task 4.3: Frontend Coding Arena
 
 ---
 
@@ -265,7 +265,7 @@ Acceptance Criteria:
 
 ## Task 4.1
 
-Status: PENDING
+Status: COMPLETED
 
 Judge0 Integration
 
@@ -277,7 +277,7 @@ Acceptance Criteria:
 
 ## Task 4.2
 
-Status: PENDING
+Status: COMPLETED
 
 Submission Processing
 
@@ -289,7 +289,7 @@ Acceptance Criteria:
 
 ## Task 4.3
 
-Status: PENDING
+Status: COMPLETED
 
 Battle Scoring
 
@@ -303,7 +303,7 @@ Acceptance Criteria:
 
 ## Task 5.1
 
-Status: PENDING
+Status: COMPLETED
 
 Redis Connection Layer
 
@@ -311,7 +311,7 @@ Redis Connection Layer
 
 ## Task 5.2
 
-Status: PENDING
+Status: COMPLETED
 
 Active Room Cache
 
@@ -319,7 +319,7 @@ Active Room Cache
 
 ## Task 5.3
 
-Status: PENDING
+Status: COMPLETED
 
 Leaderboard Sorted Set
 
@@ -327,7 +327,7 @@ Leaderboard Sorted Set
 
 ## Task 5.4
 
-Status: PENDING
+Status: COMPLETED
 
 Matchmaking Queue
 
@@ -335,7 +335,7 @@ Matchmaking Queue
 
 ## Task 5.5
 
-Status: PENDING
+Status: COMPLETED
 
 Redis Pub/Sub
 
@@ -345,7 +345,7 @@ Redis Pub/Sub
 
 ## Task 6.1
 
-Status: PENDING
+Status: COMPLETED
 
 Quick Match
 
@@ -353,17 +353,9 @@ Quick Match
 
 ## Task 6.2
 
-Status: PENDING
+Status: COMPLETED
 
 Friend Challenges
-
----
-
-## Task 6.3
-
-Status: PENDING
-
-Tournament Matchmaking
 
 ---
 

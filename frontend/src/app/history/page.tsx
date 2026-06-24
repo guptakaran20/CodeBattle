@@ -77,47 +77,41 @@ export default function HistoryPage() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-surface-variant bg-surface-container-low">
-                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant font-normal tracking-widest uppercase">Engagement ID</th>
-                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant font-normal tracking-widest uppercase">Format</th>
-                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant font-normal tracking-widest uppercase">Status</th>
-                  <th className="py-4 px-6 font-code-sm text-xs text-on-surface-variant font-normal tracking-widest uppercase text-right">Timestamp</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-variant">
-                {history.map((battle, i) => {
-                  const isCompleted = battle.status === 'COMPLETED';
-                  const displayStatus = isCompleted ? 'Win' : battle.status;
-                  const visualWin = isCompleted || battle.status === 'IN_PROGRESS';
+          <div className="p-4 md:p-6 flex flex-col gap-4">
+            {history.map((battle, i) => {
+              const isCompleted = battle.status === 'COMPLETED';
+              const visualWin = isCompleted || battle.status === 'IN_PROGRESS';
+              const isDraw = battle.result?.winReason === 'TIMEOUT';
+              
+              let titleStatus = <span className="text-primary">{battle.status}</span>;
+              if (isCompleted) {
+                 titleStatus = isDraw ? <span className="text-on-surface-variant">Draw</span> : <span className="text-emerald-400">Match Completed</span>;
+              }
 
-                  return (
-                    <tr key={battle.battleCode || i} className="hover:bg-surface-container-high transition-colors group">
-                      <td className="py-4 px-6">
-                        <Link href={`/battle/${battle.battleCode}`} className="font-code-sm text-sm text-primary hover:text-primary-fixed transition-colors underline decoration-primary/30 underline-offset-4">
-                          {battle.battleCode}
-                        </Link>
-                      </td>
-                      <td className="py-4 px-6 font-code-sm text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">
+              return (
+                <div key={battle.battleCode || i} className="bg-surface-container-low border border-surface-variant rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all group">
+                  <div className="flex flex-col">
+                    <span className="font-headline font-bold text-lg text-on-surface flex items-center gap-2">
+                      {titleStatus}
+                      <span className="text-on-surface-variant font-normal text-sm font-code-sm ml-2 px-2 py-0.5 rounded bg-surface-variant/30 border border-surface-variant">
                         {battle.battleMode} • {battle.battleType}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-block px-3 py-1 rounded text-xs font-code-sm border ${
-                          visualWin ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-error/10 border-error/30 text-error'
-                        }`}>
-                          {displayStatus}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 font-code-sm text-sm text-on-surface-variant text-right">
-                        {formatDate(battle.createdAt)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      </span>
+                    </span>
+                    <span className="text-on-surface-variant text-sm font-code-sm mt-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                      {formatDate(battle.createdAt)}
+                    </span>
+                  </div>
+                  
+                  <Link 
+                    href={isCompleted ? `/replay/${battle._id || battle.battleCode}` : `/battle/${battle.battleCode}`} 
+                    className="flex items-center gap-2 text-primary hover:text-primary-fixed font-label-caps tracking-widest text-xs uppercase bg-primary/10 px-4 py-2.5 rounded-lg border border-primary/20 hover:bg-primary/20 transition-all whitespace-nowrap w-fit"
+                  >
+                    {isCompleted ? 'View Replay' : 'Enter Battle'} <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

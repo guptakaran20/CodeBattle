@@ -6,6 +6,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -15,11 +16,16 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [formData, setFormData] = useState({ bio: '', college: '', country: '', name: '' });
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [recentBattles, setRecentBattles] = useState<any[]>([]);
   const router = useRouter();
 
   const fetchProfile = async () => {
     try {
-      const res = await api.get('/auth/me');
+      const [res, historyRes] = await Promise.all([
+        api.get('/auth/me'),
+        api.get('/battles').catch(() => ({ data: { success: false } }))
+      ]);
+
       if (res.data.success) {
         const userData = res.data.data.user;
         setUser(userData);
@@ -29,6 +35,10 @@ export default function ProfilePage() {
           country: userData.country || '',
           name: userData.name || ''
         });
+      }
+
+      if (historyRes?.data?.success) {
+        setRecentBattles(historyRes.data.data.battles.slice(0, 3));
       }
     } catch (error) {
       router.push('/login');
@@ -336,6 +346,37 @@ export default function ProfilePage() {
                 </button>
               </div>
             )}
+          </div>
+
+          <div className="bg-surface-container border border-surface-variant rounded-xl p-6 md:p-8 shadow-lg">
+            <h2 className="font-headline-lg text-xl font-semibold border-b border-surface-variant pb-2 mb-6">Recent Replays</h2>
+            {recentBattles.length === 0 ? (
+              <p className="text-on-surface-variant text-sm">No recent matches found.</p>
+            ) : (
+              <div className="space-y-4">
+                {recentBattles.map(battle => (
+                  <div key={battle.battleCode} className="bg-surface-container-low border border-surface-variant rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-primary/40 transition-all group">
+                    <div>
+                      <div className="font-bold text-on-surface">
+                        {battle.status === 'COMPLETED' ? (
+                          battle.result?.winReason === 'TIMEOUT' ? <span className="text-on-surface-variant">Draw</span> : <span className="text-emerald-400">Match Completed</span>
+                        ) : (
+                          <span className="text-primary">{battle.status}</span>
+                        )}
+                      </div>
+                      <div className="text-on-surface-variant text-xs font-code-sm mt-1">{battle.battleMode} • {battle.battleType}</div>
+                    </div>
+                    <Link 
+                      href={battle.status === 'COMPLETED' ? `/replay/${battle._id || battle.battleCode}` : `/battle/${battle.battleCode}`} 
+                      className="flex items-center gap-2 text-primary hover:text-primary-fixed font-label-caps tracking-widest text-[10px] uppercase bg-primary/10 px-3 py-1.5 rounded border border-primary/20 hover:bg-primary/20 transition-all w-fit h-fit mt-auto mb-auto"
+                    >
+                      {battle.status === 'COMPLETED' ? 'View Replay' : 'Enter Battle'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Link href="/history" className="inline-block mt-4 text-sm text-primary hover:underline font-code-sm">View Full History →</Link>
           </div>
 
         </div>

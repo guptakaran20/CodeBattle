@@ -4,6 +4,7 @@ import type { JoinRoomPayload, BattleStatePayload } from './socket.types.js';
 import { Battle } from '../battles/battle.model.js';
 import { PresenceService } from '../../services/redis/PresenceService.js';
 import { MatchmakingService } from '../../services/redis/MatchmakingService.js';
+import { ReplayService } from '../replays/replay.service.js';
 
 // Track disconnect timeouts: userId -> NodeJS.Timeout
 const userDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
@@ -29,6 +30,7 @@ export const initializeBattleGateway = (io: Server) => {
 
         socket.join(`battle_${battleCode}`);
         (socket as any).currentBattleCode = battleCode;
+        (socket as any).currentBattleId = battle._id.toString();
 
         // Clear any pending disconnect timeout for this user
         if (userDisconnectTimeouts.has(user._id.toString())) {
@@ -100,6 +102,11 @@ export const initializeBattleGateway = (io: Server) => {
         io.to(`battle_${battleCode}`).emit(SocketEvents.USER_LEFT, {
           userId: user._id.toString()
         });
+
+        const battleId = (socket as any).currentBattleId;
+        if (battleId) {
+          await ReplayService.logEvent(battleId, 'PlayerLeft', { userId: user._id.toString() });
+        }
 
         userDisconnectTimeouts.delete(user._id.toString());
       }, 15000);

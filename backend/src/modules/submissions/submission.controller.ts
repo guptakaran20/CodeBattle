@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Submission } from './submission.model.js';
 import { Battle } from '../battles/battle.model.js';
 import { Problem } from '../problems/problem.model.js';
-import { BattleEvent } from '../battles/battleEvent.model.js';
+import { ReplayService } from '../replays/replay.service.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
 import { SubmissionProcessorFactory } from './processors/factory.js';
@@ -52,11 +52,7 @@ export const createSubmission = async (req: AuthenticatedRequest, res: Response,
       status: 'PENDING'
     } as any);
 
-    await BattleEvent.create({
-      battleId: battle._id,
-      eventType: 'SubmissionCreated',
-      payload: { userId: req.user.id, submissionId: submission._id, attemptNumber: validatedData.attemptNumber }
-    });
+    await ReplayService.logEvent(battle._id.toString(), 'SubmissionPending', { userId: req.user.id, submissionId: submission._id, attemptNumber: validatedData.attemptNumber });
 
     // Notify clients that submission is pending
     const io = getIO();

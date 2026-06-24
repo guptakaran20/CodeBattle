@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Battle } from './battle.model.js';
-import { BattleEvent } from './battleEvent.model.js';
+import { ReplayService } from '../replays/replay.service.js';
 import { Problem } from '../problems/problem.model.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
@@ -49,11 +49,7 @@ export const createBattle = async (req: AuthenticatedRequest, res: Response, nex
       status: 'WAITING'
     } as any);
 
-    await BattleEvent.create({
-      battleId: battle._id,
-      eventType: 'BattleCreated',
-      payload: { creator: req.user.id, battleCode }
-    });
+    await ReplayService.logEvent(battle._id.toString(), 'BattleCreated', { creator: req.user.id, battleCode });
 
     return res.status(201).json({ success: true, data: { battle } });
   } catch (error: any) {
@@ -95,6 +91,17 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
           battle.result = { winReason: 'TIMEOUT' };
         }
         await battle.save();
+        
+        await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Timeout' });
+        const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+        await ReplayService.createSummary(
+          battle._id.toString(),
+          null,
+          participantIds,
+          battle.startTime,
+          new Date(),
+          'COMPLETED'
+        );
         
         await BattleCacheService.deleteBattle(battle.battleCode);
         
@@ -148,11 +155,7 @@ export const joinBattle = async (req: AuthenticatedRequest, res: Response, next:
 
     await battle.save();
 
-    await BattleEvent.create({
-      battleId: battle._id,
-      eventType: 'PlayerJoined',
-      payload: { userId: req.user.id }
-    });
+    await ReplayService.logEvent(battle._id.toString(), 'PlayerJoined', { userId: req.user.id });
 
     // We don't necessarily need to emit USER_JOINED here because the gateway handles it when they connect via socket.
     // However, if they are already connected, the gateway will not know until they re-join.
@@ -201,11 +204,7 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
       endTime: new Date(battle.startTime.getTime() + battle.durationMinutes * 60000).toISOString()
     });
 
-    await BattleEvent.create({
-      battleId: battle._id,
-      eventType: 'BattleStarted',
-      payload: { startTime: battle.startTime }
-    });
+    await ReplayService.logEvent(battle._id.toString(), 'BattleStarted', { startTime: battle.startTime });
 
     try {
       const io = getIO();
@@ -239,11 +238,16 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
     battle.status = 'CANCELLED';
     await battle.save();
 
-    await BattleEvent.create({
-      battleId: battle._id,
-      eventType: 'BattleCompleted', 
-      payload: { reason: 'Cancelled by creator' }
-    });
+    await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Cancelled by creator' });
+    const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+    await ReplayService.createSummary(
+      battle._id.toString(),
+      null,
+      participantIds,
+      battle.startTime || new Date(),
+      new Date(),
+      'CANCELLED'
+    );
 
     try {
       const io = getIO();
