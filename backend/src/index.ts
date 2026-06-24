@@ -21,6 +21,7 @@ import { ReplayWorker } from './workers/replay.worker.js';
 import { initializeSocket } from './modules/websockets/socket.service.js';
 import { MatchmakingEngine } from './modules/matchmaking/matchmaking.engine.js';
 import { LeaderboardService } from './services/redis/LeaderboardService.js';
+import { seedAdmin } from './scripts/seedAdmin.js';
 
 dotenv.config();
 
@@ -74,4 +75,5 @@ httpServer.listen(port, () => {
   const replayWorker = new ReplayWorker();
   replayWorker.start().catch(console.error);
   LeaderboardService.rebuildLeaderboard().catch(console.error);
+  seedAdmin().catch(console.error);
 });

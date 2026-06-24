@@ -37,3 +37,17 @@ export const requireAuth = (req: AuthenticatedRequest, res: Response, next: Next
     });
   }
 };
+
+export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  requireAuth(req, res, () => {
+    if (req.user && req.user.role === 'ADMIN') {
+      next();
+    } else {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Forbidden: Admin access required', 
+        errorCode: 'AUTH_003' 
+      });
+    }
+  });
+};

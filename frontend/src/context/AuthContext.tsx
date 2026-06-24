@@ -9,6 +9,9 @@ interface User {
   username: string;
   email: string;
   rating: number;
+  losses?: number;
+  draws?: number;
+  role: 'USER' | 'ADMIN';
   [key: string]: any;
 }
 

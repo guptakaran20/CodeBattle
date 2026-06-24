@@ -36,7 +36,11 @@ export default function LoginPage() {
       const res = await api.post('/auth/login', { email, password });
       if (res.data.success) {
         await refreshUser();
-        router.push('/dashboard');
+        if (res.data.data.user.role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password');
