@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useMatchmakingSocket } from '@/hooks/useMatchmakingSocket';
 import { useAuth } from '@/context/AuthContext';
-import { Search, Swords, Target, Crosshair, Activity } from 'lucide-react';
+import { Search, Swords, Target, Crosshair, Activity, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ArenaDashboard() {
@@ -19,6 +19,8 @@ export default function ArenaDashboard() {
   const [challengeUser, setChallengeUser] = useState('');
   const [liveFeed, setLiveFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiTopic, setAiTopic] = useState('');
+  const [generatingAi, setGeneratingAi] = useState(false);
   
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -88,6 +90,46 @@ export default function ArenaDashboard() {
     e.preventDefault();
     if (!battleCodeInput.trim()) return;
     router.push(`/battle/${battleCodeInput.trim().toUpperCase()}`);
+  };
+
+  const handleGenerateAiProblem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiTopic.trim()) return;
+    
+    try {
+      setGeneratingAi(true);
+      
+      // 1. Generate Problem
+      const res = await api.post('/ai/generate-problem', { topicOrBaseProblem: aiTopic });
+      if (!res.data.success) throw new Error('Failed to generate problem');
+      
+      const newProblemId = res.data.data.problem._id;
+
+      // 2. Create Practice Battle
+      const battleRes = await api.post('/battles', {
+        battleType: 'ONE_VS_ONE',
+        battleMode: 'PRACTICE',
+        maxParticipants: 2,
+        problemId: newProblemId,
+        durationMinutes: 30
+      });
+
+      if (!battleRes.data.success) throw new Error('Failed to create practice room');
+
+      const battleCode = battleRes.data.data.battle.battleCode;
+      toast.success('AI Problem Generated successfully!');
+      
+      // 3. Redirect to battle
+      router.push(`/battle/${battleCode}`);
+    } catch (err: any) {
+      if (err.response?.status === 429) {
+        toast.error('AI Request limit exceeded. Please try again tomorrow.');
+      } else {
+        toast.error(err.response?.data?.message || err.message || 'Failed to generate AI problem');
+      }
+    } finally {
+      setGeneratingAi(false);
+    }
   };
 
   return (
@@ -246,6 +288,39 @@ export default function ArenaDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            <h2 className="text-2xl font-headline font-bold text-foreground flex items-center gap-2 mt-12"><Sparkles className="text-primary"/> AI Practice Room</h2>
+            <Card className="bg-surface border-border overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none"></div>
+              <CardHeader>
+                <CardTitle>Generate Similar Problem</CardTitle>
+                <CardDescription>Type a topic or problem name (e.g. "Dynamic Programming" or "Two Sum") and let the AI instantly generate a unique coding challenge and test cases just for you.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleGenerateAiProblem} className="flex gap-2 relative z-10">
+                  <Input 
+                    placeholder="e.g. Graph Traversal, Binary Search..." 
+                    value={aiTopic} 
+                    onChange={e => setAiTopic(e.target.value)} 
+                    className="bg-surface-bright border-primary/20 focus-visible:ring-primary/50" 
+                    disabled={generatingAi}
+                  />
+                  <Button type="submit" variant="default" className="font-bold tracking-wider relative overflow-hidden group" disabled={generatingAi || !aiTopic.trim()}>
+                    {generatingAi ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin"></div>
+                        GENERATING...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" /> GENERATE
+                      </span>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
