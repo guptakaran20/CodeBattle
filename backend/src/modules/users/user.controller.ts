@@ -47,3 +47,21 @@ export const getRatingHistory = async (req: AuthenticatedRequest, res: Response,
     next(error);
   }
 };
+
+export const getPublicRatingHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { username } = req.params;
+    const user = await User.findOne({ username: username as string }).select('_id');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found', errorCode: 'USER_002' });
+    }
+    
+    const history = await UserRatingEvent.find({ userId: user._id })
+      .sort({ createdAt: 1 })
+      .limit(50);
+      
+    return res.status(200).json({ success: true, data: { history } });
+  } catch (error) {
+    next(error);
+  }
+};

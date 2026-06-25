@@ -6,29 +6,43 @@ import { api } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Medal, Swords, Target, Activity, Flame, Shield, Zap } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function PublicProfilePage() {
   const params = useParams();
   const username = params.username as string;
 
   const [profile, setProfile] = useState<any>(null);
+  const [ratingHistory, setRatingHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get(`/users/${username}`);
-        if (res.data.success) {
-          setProfile(res.data.data.user);
+        const [profileRes, historyRes] = await Promise.all([
+          api.get(`/users/${username}`),
+          api.get(`/users/${username}/rating-history`).catch(() => ({ data: { success: false } }))
+        ]);
+        
+        if (profileRes.data.success) {
+          setProfile(profileRes.data.data.user);
+        }
+        if (historyRes.data?.success) {
+          setRatingHistory(historyRes.data.data.history);
         }
       } catch (err: any) {
-        setError('User not found.');
+        if (!profile) setError('User not found.');
       } finally {
         setLoading(false);
       }
     };
-    if (username) fetchProfile();
+    
+    if (username) {
+      fetchData();
+      const interval = setInterval(fetchData, 5000);
+      return () => clearInterval(interval);
+    }
   }, [username]);
 
   if (error) return <div className="min-h-screen flex items-center justify-center text-destructive">{error}</div>;
@@ -70,7 +84,7 @@ export default function PublicProfilePage() {
                 <Skeleton className="h-10 w-32" />
               ) : (
                 <div className="bg-primary/10 border border-primary/30 px-6 py-2 rounded-lg text-primary font-bold font-mono">
-                  {profile?.stats?.rating || 1500} ELO
+                  {profile?.rating || 1500} ELO
                 </div>
               )}
             </div>
@@ -106,25 +120,34 @@ export default function PublicProfilePage() {
 
           <Card className="bg-surface border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Trophy size={18} className="text-amber-500"/> Achievements</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Activity size={18} className="text-primary"/> Recent Matches</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <Skeleton className="h-24 w-full" />
+              {loading && !ratingHistory.length ? (
+                <Skeleton className="h-48 w-full" />
+              ) : ratingHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {[...ratingHistory].reverse().slice(0, 5).map((match: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-surface-bright border border-border">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${match.outcome === 'WIN' ? 'bg-emerald-500' : match.outcome === 'LOSS' ? 'bg-red-500' : 'bg-slate-500'}`} />
+                        <div>
+                          <div className="font-bold text-sm text-foreground">{match.outcome}</div>
+                          <div className="text-xs text-muted-foreground">{new Date(match.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`font-mono font-bold text-sm ${match.delta > 0 ? 'text-emerald-500' : match.delta < 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                          {match.delta > 0 ? '+' : ''}{match.delta}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">{match.newRating} ELO</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500 border border-amber-500/20"><Flame size={20}/></div>
-                    <div className="text-xs font-bold text-muted-foreground">Hot Streak</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border border-emerald-500/20"><Shield size={20}/></div>
-                    <div className="text-xs font-bold text-muted-foreground">Defender</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 border border-blue-500/20"><Zap size={20}/></div>
-                    <div className="text-xs font-bold text-muted-foreground">Fast Solver</div>
-                  </div>
+                <div className="py-8 text-center text-sm text-muted-foreground border border-dashed border-border rounded-lg bg-surface-bright">
+                  No recent matches.
                 </div>
               )}
             </CardContent>
@@ -136,10 +159,10 @@ export default function PublicProfilePage() {
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total Matches', value: profile?.stats?.totalBattles || 0, icon: Swords, color: 'text-blue-500' },
-              { label: 'Wins', value: profile?.stats?.wins || 0, icon: Target, color: 'text-emerald-500' },
-              { label: 'Losses', value: profile?.stats?.losses || 0, icon: Activity, color: 'text-red-500' },
-              { label: 'Win Rate', value: profile?.stats?.totalBattles ? `${Math.round((profile?.stats?.wins / profile?.stats?.totalBattles) * 100)}%` : '0%', icon: Medal, color: 'text-purple-500' }
+              { label: 'Total Matches', value: profile?.battlesPlayed || 0, icon: Swords, color: 'text-blue-500' },
+              { label: 'Wins', value: profile?.wins || 0, icon: Target, color: 'text-emerald-500' },
+              { label: 'Losses', value: profile?.losses || 0, icon: Activity, color: 'text-red-500' },
+              { label: 'Win Rate', value: profile?.battlesPlayed ? `${Math.round((profile?.wins / profile?.battlesPlayed) * 100)}%` : '0%', icon: Medal, color: 'text-purple-500' }
             ].map((stat, i) => (
               <Card key={i} className="bg-surface-bright border-border">
                 <CardContent className="p-6 text-center space-y-2">
@@ -155,19 +178,54 @@ export default function PublicProfilePage() {
             ))}
           </div>
 
-          {/* Mock Rating Graph */}
+          {/* Rating Graph */}
           <Card className="bg-surface border-border">
             <CardHeader>
               <CardTitle>Rating History</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {loading && !ratingHistory.length ? (
                 <Skeleton className="h-64 w-full" />
+              ) : ratingHistory.length > 0 ? (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={ratingHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                      <XAxis 
+                        dataKey="createdAt" 
+                        tickFormatter={(val) => new Date(val).toLocaleDateString()}
+                        stroke="#888" 
+                        fontSize={12}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        domain={['auto', 'auto']} 
+                        stroke="#888" 
+                        fontSize={12}
+                        tickMargin={10}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#333', borderRadius: '8px' }}
+                        itemStyle={{ color: '#f59e0b', fontWeight: 'bold' }}
+                        labelFormatter={(label) => new Date(label).toLocaleString()}
+                        formatter={(value: number) => [`${value} ELO`, 'Rating']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="newRating" 
+                        stroke="#f59e0b" 
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: '#1e1e2d', stroke: '#f59e0b', strokeWidth: 2 }}
+                        activeDot={{ r: 6, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+                        animationDuration={500}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
                 <div className="h-64 border border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground flex-col gap-2">
                   <Activity className="w-8 h-8 text-primary/50" />
-                  <span className="font-mono text-sm">Rating graph rendering...</span>
-                  <span className="text-xs">(Requires Recharts / D3 in production)</span>
+                  <span className="font-mono text-sm">No rating history available</span>
                 </div>
               )}
             </CardContent>

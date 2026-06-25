@@ -69,7 +69,7 @@ export default function LeaderboardPage() {
 
       {/* Podium Section */}
       {top3.length > 0 && (
-        <div className="flex justify-center items-end gap-2 md:gap-6 mb-24 px-2 mt-8">
+        <div className="flex justify-center items-end gap-2 md:gap-6 mb-24 px-2 mt-16">
           {top3.map((player, idx) => {
             let rank = 2;
             if (idx === 1) rank = 1;
@@ -77,7 +77,7 @@ export default function LeaderboardPage() {
 
             return (
               <div key={player.userId} className={`flex flex-col items-center w-28 md:w-40 relative group`}>
-                <div className="absolute -top-20 md:-top-24 flex flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
+                <div className="flex flex-col items-center transition-transform duration-300 group-hover:-translate-y-2 pb-3 w-full">
                   <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full border-2 ${getRankColor(rank).split(' ')[1]} flex items-center justify-center font-bold text-2xl uppercase bg-surface-container overflow-hidden`}>
                     {player.avatar ? <img src={player.avatar} alt={player.username} className="w-full h-full object-cover" /> : player.username.charAt(0)}
                   </div>
