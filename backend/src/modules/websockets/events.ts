@@ -15,6 +15,7 @@ export enum SocketEvents {
   SUBMISSION_VERDICT = "submissionVerdict",
 
   WINNER_DECLARED = "winnerDeclared",
+  GLOBAL_FEED_UPDATE = "global_feed_update",
   BATTLE_COMPLETED = "battleCompleted",
 
   QUEUE_JOINED = "queueJoined",

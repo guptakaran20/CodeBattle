@@ -2,18 +2,26 @@ import { MatchmakingService } from '../../services/redis/MatchmakingService.js';
 import type { Difficulty } from '../../services/redis/MatchmakingService.js';
 import { Battle } from '../battles/battle.model.js';
 import { Problem } from '../problems/problem.model.js';
+import { User } from '../users/user.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
+import { BattleGatewayService } from '../websockets/battle.gateway.js';
 
 export class MatchmakingEngine {
   private static intervalId: NodeJS.Timeout | null = null;
-  private static readonly TICK_RATE_MS = 3000;
+  private static readonly TICK_RATE_MS = 1000;
   private static readonly DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
+
+  private static isProcessing = false;
 
   static start() {
     if (this.intervalId) return;
     console.log('[Matchmaking Engine] Started');
-    this.intervalId = setInterval(() => this.processQueues(), this.TICK_RATE_MS);
+    this.intervalId = setInterval(() => {
+      if (!this.isProcessing) {
+        this.processQueues();
+      }
+    }, this.TICK_RATE_MS);
   }
 
   static stop() {
@@ -25,18 +33,88 @@ export class MatchmakingEngine {
   }
 
   private static async processQueues() {
-    for (const diff of this.DIFFICULTIES) {
-      await this.processQueue(diff);
+    this.isProcessing = true;
+    try {
+      for (const diff of this.DIFFICULTIES) {
+        await this.processQueue(diff);
+      }
+    } finally {
+      this.isProcessing = false;
     }
   }
 
   private static async processQueue(difficulty: Difficulty) {
     const members = await MatchmakingService.getQueueMembers(difficulty);
-    if (members.length < 2) return; // Not enough players to match
+    const io = getIO();
+
+    // Emit queue status to all users before we process matching
+    for (const userId of members) {
+      const state = await MatchmakingService.getPlayerState(userId);
+      if (state) {
+        const waitTimeSec = Math.floor((Date.now() - state.joinedAt) / 1000);
+        const eloRange = MatchmakingService.getDynamicSearchRadius(state.joinedAt);
+        
+        io?.to(`user_${userId}`).emit(SocketEvents.QUEUE_STATUS, {
+          queueTime: waitTimeSec,
+          eloRange: eloRange
+        });
+      }
+    }
+
+    if (members.length < 2) {
+      // Create bot match for testing if waiting more than 5 seconds
+      for (const userId of members) {
+        const state = await MatchmakingService.getPlayerState(userId);
+        if (state) {
+          const waitTimeSec = Math.floor((Date.now() - state.joinedAt) / 1000);
+          if (waitTimeSec > 5) {
+            // Find an opponent (admin or any other user) or just use a dummy id
+            const opponentUser = await User.findOne({ _id: { $ne: userId } });
+            if (opponentUser) {
+              const oppId = opponentUser._id.toString();
+              console.log(`[Matchmaking Engine] Found Bot Match! ${userId} vs ${oppId} (Difficulty: ${difficulty})`);
+              
+              try {
+                const count = await Problem.countDocuments({ difficulty });
+                const random = Math.floor(Math.random() * count);
+                const problem = await Problem.findOne({ difficulty }).skip(random);
+
+                if (problem) {
+                  await MatchmakingService.leaveQueue(userId);
+                  
+                  const battleCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                  const battle = await Battle.create({
+                    battleCode,
+                    battleType: 'ONE_VS_ONE',
+                    battleMode: 'COMPETITIVE',
+                    maxParticipants: 2,
+                    problem: problem._id,
+                    creator: userId,
+                    status: 'WAITING',
+                    durationMinutes: 30,
+                    teams: [
+                      { teamId: '1', name: 'Team A', members: [userId], score: 0 },
+                      { teamId: '2', name: 'Team B', members: [oppId], score: 0 }
+                    ]
+                  });
+
+                  io?.to(`user_${userId}`).emit(SocketEvents.MATCH_FOUND, {
+                    battleCode: battle.battleCode,
+                    opponentId: oppId
+                  });
+                }
+              } catch (e) {
+                console.error('Error creating bot match:', e);
+              }
+            }
+          }
+        }
+      }
+      return; // Not enough players to match
+    }
 
     // Track matched players in this cycle to avoid double matching
     const matched = new Set<string>();
-    const io = getIO();
 
     for (const userId of members) {
       if (matched.has(userId)) continue;
@@ -86,13 +164,14 @@ export class MatchmakingEngine {
             battleCode,
             battleType: 'ONE_VS_ONE',
             battleMode: 'COMPETITIVE', // Ranked basically
+            maxParticipants: 2,
             problem: problem._id,
             creator: userId, // Technical creator, though engine made it
             status: 'WAITING',
             durationMinutes: 30, // Default duration
             teams: [
-              { name: 'Team A', members: [userId], score: 0 },
-              { name: 'Team B', members: [oppId], score: 0 }
+              { teamId: '1', name: 'Team A', members: [userId], score: 0 },
+              { teamId: '2', name: 'Team B', members: [oppId], score: 0 }
             ]
           });
 
@@ -108,6 +187,16 @@ export class MatchmakingEngine {
           // To oppId
           io?.to(`user_${oppId}`).emit(SocketEvents.MATCH_FOUND, { ...payload, opponentId: userId });
 
+          // 5. Emit global feed
+          const p1 = await MatchmakingService.getPlayerState(userId);
+          const p2 = await MatchmakingService.getPlayerState(oppId);
+          BattleGatewayService.broadcastGlobalFeed(io, {
+            event: 'MATCH_STARTED',
+            users: ['Player', 'Player'], // Could fetch usernames if needed
+            difficulty: difficulty,
+            time: 'Just now'
+          });
+
         } catch (error) {
           console.error('[Matchmaking Engine] Error creating match:', error);
           // If creation fails, we should technically re-queue them, but for MVP it's okay to drop or leave.
@@ -117,20 +206,5 @@ export class MatchmakingEngine {
       }
     }
 
-    // Emit queue status to remaining unmatched users
-    for (const userId of members) {
-      if (!matched.has(userId)) {
-        const state = await MatchmakingService.getPlayerState(userId);
-        if (state) {
-          const waitTimeSec = Math.floor((Date.now() - state.joinedAt) / 1000);
-          const eloRange = MatchmakingService.getDynamicSearchRadius(state.joinedAt);
-          
-          io?.to(`user_${userId}`).emit(SocketEvents.QUEUE_STATUS, {
-            queueTime: waitTimeSec,
-            eloRange: eloRange
-          });
-        }
-      }
     }
-  }
 }

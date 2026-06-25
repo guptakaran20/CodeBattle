@@ -32,11 +32,35 @@ export default function BattleLobbyPage() {
     }
   };
 
+  const handleCancel = async () => {
+    try {
+      if (confirm('Are you sure you want to completely cancel and delete this battle?')) {
+        await api.delete(`/battles/${battleCode}`);
+        toast.success('Battle completely deleted.');
+        router.push('/arena');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to cancel');
+    }
+  };
+
   const copyCode = () => {
     const url = `${window.location.origin}/battle/${battleCode}`;
     navigator.clipboard.writeText(url);
     toast.success('Battle link copied to clipboard!');
   };
+
+  const now = new Date().getTime();
+  const endTime = battle?.startTime ? new Date(battle.startTime).getTime() + battle.durationMinutes * 60000 : 0;
+  const isExpired = battle?.status === 'IN_PROGRESS' && now > endTime;
+  const displayStatus = isExpired ? 'COMPLETED' : battle?.status;
+
+  useEffect(() => {
+    if (displayStatus === 'COMPLETED' && battle?._id) {
+      toast.info("Battle has ended! Redirecting to results...");
+      router.push(`/replay/${battle._id}`);
+    }
+  }, [displayStatus, battle?._id, router]);
 
   if (!battle) {
     return (
@@ -53,11 +77,6 @@ export default function BattleLobbyPage() {
   const isParticipant = currentUser && allMembers.some((m: any) => m._id === currentUser._id || m === currentUser._id);
   const isCreator = currentUser && battle.creator._id === currentUser._id;
   const isFull = allMembers.length >= battle.maxParticipants;
-
-  const now = new Date().getTime();
-  const endTime = battle.startTime ? new Date(battle.startTime).getTime() + battle.durationMinutes * 60000 : 0;
-  const isExpired = battle.status === 'IN_PROGRESS' && now > endTime;
-  const displayStatus = isExpired ? 'COMPLETED' : battle.status;
 
   if (displayStatus === 'IN_PROGRESS' || displayStatus === 'COMPLETED') {
     if (isParticipant || displayStatus === 'COMPLETED') {
@@ -242,9 +261,20 @@ export default function BattleLobbyPage() {
         {/* Action Controls */}
         <div className="col-span-12 mt-md mb-xl flex justify-end gap-md">
           {isCreator ? (
-            <button onClick={handleStart} disabled={!isFull} className={`px-xl py-sm font-label-caps text-label-caps uppercase tracking-widest rounded flex items-center gap-xs ${isFull ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant border border-surface-variant cursor-not-allowed'}`}>
-              <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-              Start Match
+            <div className="flex gap-md">
+              <button onClick={handleCancel} className="px-xl py-sm bg-error/10 text-error border border-error/30 hover:bg-error/20 font-label-caps text-label-caps uppercase tracking-widest rounded transition-colors flex items-center gap-xs">
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+                Cancel
+              </button>
+              <button onClick={handleStart} disabled={!isFull} className={`px-xl py-sm font-label-caps text-label-caps uppercase tracking-widest rounded flex items-center gap-xs ${isFull ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant border border-surface-variant cursor-not-allowed'}`}>
+                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                Start Match
+              </button>
+            </div>
+          ) : !isParticipant ? (
+            <button onClick={() => socketHook.joinRoom()} disabled={isFull} className={`px-xl py-sm font-label-caps text-label-caps uppercase tracking-widest rounded flex items-center gap-xs ${isFull ? 'bg-surface-variant text-on-surface-variant border border-surface-variant cursor-not-allowed' : 'bg-primary text-on-primary hover:opacity-90'}`}>
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              {isFull ? 'Match Full' : 'Join Match'}
             </button>
           ) : (
             <div className="px-xl py-sm bg-surface-variant text-on-surface-variant border border-surface-variant font-label-caps text-label-caps uppercase tracking-widest rounded cursor-not-allowed flex items-center gap-xs">

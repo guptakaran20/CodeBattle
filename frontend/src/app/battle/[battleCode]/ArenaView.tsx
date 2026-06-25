@@ -1,10 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { Play, Send, Clock, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { useUI } from '@/context/UIContext';
 
@@ -15,6 +25,7 @@ interface ArenaViewProps {
 }
 
 export default function ArenaView({ battle, socketHook, currentUser }: ArenaViewProps) {
+  const router = useRouter();
   const { setSidebarVisible } = useUI();
 
   useEffect(() => {
@@ -37,6 +48,21 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
 
   const [timer, setTimer] = useState(0);
 
+  const editorRef = useRef<any>(null);
+  const [editorFontSize, setEditorFontSize] = useState(14);
+  const [editorMinimap, setEditorMinimap] = useState(false);
+  const [editorWordWrap, setEditorWordWrap] = useState<'on' | 'off'>('off');
+
+  const handleEditorDidMount = (editor: any) => {
+    editorRef.current = editor;
+  };
+
+  const formatCode = () => {
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument')?.run();
+    }
+  };
+
   const { isConnected, participants, battle: socketBattle, submissionHistory, winner } = socketHook;
 
   // Local storage persistence
@@ -51,9 +77,27 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
   }, [language, battle.battleCode, problem.starterCode]);
 
   useEffect(() => {
-    const interval = setInterval(() => setTimer(t => t + 1), 1000);
+    const calcTimer = () => {
+      if (battle?.startTime) {
+        const elapsed = Math.floor((Date.now() - new Date(battle.startTime).getTime()) / 1000);
+        return Math.max(0, elapsed);
+      }
+      return 0;
+    };
+    
+    setTimer(calcTimer());
+    const interval = setInterval(() => setTimer(calcTimer()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [battle?.startTime]);
+
+  const isExpired = battle?.durationMinutes && timer >= battle.durationMinutes * 60;
+  
+  useEffect(() => {
+    if (isExpired || socketBattle?.status === 'COMPLETED') {
+       toast.info("Battle has ended! Redirecting to results...");
+       router.push(`/replay/${battle._id}`);
+    }
+  }, [isExpired, socketBattle?.status, battle._id, router]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -152,6 +196,16 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
     }
   };
 
+  const handleLeaveBattle = async () => {
+    if (!confirm("Are you sure you want to leave the battle? This will count as a forfeit.")) return;
+    try {
+      await api.post(`/battles/${battle.battleCode}/leave`);
+      toast.success("You have left the battle.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to leave battle');
+    }
+  };
+
   const allMembers = battle.teams ? battle.teams.flatMap((t: any) => t.members) : [];
   const opponent = allMembers.find((m: any) => m._id !== currentUser.id && m._id !== currentUser._id) || { username: 'Opponent', rating: '--', avatar: '' };
   
@@ -169,6 +223,9 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
         
         {/* Participants */}
         <div className="flex items-center gap-6">
+          <div className="text-xl font-bold font-title-lg tracking-tight text-[#ffc174] mr-4 hidden md:block">
+            Code<span className="text-on-surface">Arena</span>
+          </div>
           <div className="flex items-center gap-3 bg-surface border border-surface-variant rounded-md px-3 py-1.5">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-surface-variant overflow-hidden border border-primary/50 flex items-center justify-center">
@@ -199,6 +256,12 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
           <button 
+             onClick={handleLeaveBattle} 
+             className="flex items-center gap-2 border border-error/50 hover:bg-error/10 text-error px-4 py-1.5 rounded-md font-label-caps text-xs tracking-widest uppercase transition-colors"
+          >
+            Leave
+          </button>
+          <button 
              onClick={handleRunCode} 
              disabled={running || submitting}
              className="flex items-center gap-2 border border-surface-variant hover:border-surface-bright bg-surface px-4 py-1.5 rounded-md font-label-caps text-xs tracking-widest uppercase transition-colors"
@@ -228,12 +291,6 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                 onClick={() => setActiveLeftTab('desc')}
              >
                Description
-             </button>
-             <button 
-                className={`h-full px-4 font-label-caps text-xs uppercase tracking-widest border-b-2 transition-colors ${activeLeftTab === 'hints' ? 'border-[#ffc174] text-[#ffc174]' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
-                onClick={() => setActiveLeftTab('hints')}
-             >
-               Hints (0)
              </button>
              <button 
                 className={`h-full px-4 font-label-caps text-xs uppercase tracking-widest border-b-2 transition-colors ${activeLeftTab === 'subs' ? 'border-[#ffc174] text-[#ffc174]' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
@@ -288,9 +345,7 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                  )}
                </div>
             )}
-            {activeLeftTab === 'hints' && (
-               <div className="text-on-surface-variant text-sm italic">No hints available for this problem.</div>
-            )}
+
             {activeLeftTab === 'subs' && (
                <div className="text-on-surface-variant text-sm italic">You haven't submitted any solutions yet.</div>
             )}
@@ -317,8 +372,61 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                  </select>
                  
                  <div className="flex items-center gap-3 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px] cursor-pointer hover:text-on-surface transition-colors">format_align_left</span>
-                    <span className="material-symbols-outlined text-[18px] cursor-pointer hover:text-on-surface transition-colors">settings</span>
+                    <span 
+                      className="material-symbols-outlined text-[18px] cursor-pointer hover:text-on-surface transition-colors"
+                      title="Format Code"
+                      onClick={formatCode}
+                    >
+                      format_align_left
+                    </span>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="outline-none bg-transparent border-none p-0 flex items-center justify-center">
+                        <span 
+                          className="material-symbols-outlined text-[18px] cursor-pointer hover:text-on-surface transition-colors" 
+                          title="Editor Settings"
+                        >
+                          settings
+                        </span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-56" align="end">
+                        <div className="px-2 py-1.5 text-sm font-semibold text-on-surface-variant">Editor Settings</div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem 
+                          checked={editorMinimap} 
+                          onCheckedChange={setEditorMinimap}
+                          closeOnClick={false}
+                        >
+                          Show Minimap
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem 
+                          checked={editorWordWrap === 'on'} 
+                          onCheckedChange={(c) => setEditorWordWrap(c ? 'on' : 'off')}
+                          closeOnClick={false}
+                        >
+                          Word Wrap
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem closeOnClick={false} onClick={(e) => e.preventDefault()} className="flex items-center justify-between">
+                          <span>Font Size</span>
+                          <div className="flex items-center gap-3">
+                            <span 
+                              className="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setEditorFontSize(f => Math.max(10, f - 2)); }}
+                            >
+                              remove
+                            </span>
+                            <span className="w-4 text-center text-xs font-mono">{editorFontSize}</span>
+                            <span 
+                              className="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setEditorFontSize(f => Math.min(24, f + 2)); }}
+                            >
+                              add
+                            </span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                  </div>
               </div>
 
@@ -329,9 +437,11 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                   value={code}
                   onChange={handleCodeChange}
                   theme="vs-dark"
+                  onMount={handleEditorDidMount}
                   options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
+                    minimap: { enabled: editorMinimap },
+                    fontSize: editorFontSize,
+                    wordWrap: editorWordWrap,
                     lineHeight: 24,
                     padding: { top: 16 },
                     fontFamily: "'IBM Plex Mono', monospace",
@@ -375,15 +485,21 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                 {activeRightTab === 'feed' ? (
                   <div className="space-y-2">
                     <div className="flex gap-4 items-start text-on-surface-variant">
-                       <span className="text-surface-variant font-bold">00:00</span>
+                       <span className="text-surface-variant font-bold">
+                         {battle?.startTime ? new Date(battle.startTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '00:00'}
+                       </span>
                        <span>Battle started. Problem constraints: {problem.difficulty}.</span>
                     </div>
                     {submissionHistory.map((item: any, idx: number) => {
+                      const timeStr = item.timestamp 
+                        ? new Date(item.timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) 
+                        : '--:--';
+                        
                       if (item.verdict) {
                         const isWin = item.verdict === 'ACCEPTED';
                         return (
                           <div key={idx} className="flex gap-4 items-start text-on-surface">
-                            <span className="text-surface-variant font-bold">--:--</span>
+                            <span className="text-surface-variant font-bold">{timeStr}</span>
                             <span>
                               <span className="font-bold text-[#ffc174]">{item.username}</span> got{' '}
                               <span className={isWin ? 'text-emerald-400' : 'text-error'}>{item.verdict}</span>.
@@ -395,7 +511,7 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
                       } else {
                         return (
                           <div key={idx} className="flex gap-4 items-start text-emerald-400">
-                            <span className="text-surface-variant font-bold">--:--</span>
+                            <span className="text-surface-variant font-bold">{timeStr}</span>
                             <span>
                               <span className="font-bold">{item.username}</span> ran code (Judging).
                             </span>

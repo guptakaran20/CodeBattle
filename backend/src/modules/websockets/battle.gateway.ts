@@ -128,5 +128,17 @@ export const BattleGatewayService = {
   
   broadcastBattleCancelled: (io: Server, battleCode: string, reason: string) => {
     io.to(`battle_${battleCode}`).emit(SocketEvents.BATTLE_CANCELLED, { battleCode, reason });
+  },
+
+  broadcastWinner: (io: Server, battleCode: string, winnerId: string, username: string, message?: string) => {
+    io.to(`battle_${battleCode}`).emit(SocketEvents.WINNER_DECLARED, { userId: winnerId, username, message });
+  },
+
+  broadcastBattleCompleted: (io: Server, battleCode: string) => {
+    io.to(`battle_${battleCode}`).emit(SocketEvents.BATTLE_COMPLETED, { battleCode });
+  },
+
+  broadcastGlobalFeed: (io: Server, payload: any) => {
+    io.emit(SocketEvents.GLOBAL_FEED_UPDATE, payload);
   }
 };

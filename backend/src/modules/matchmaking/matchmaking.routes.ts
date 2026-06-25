@@ -4,11 +4,9 @@ import { requireAuth } from '../../common/middleware/auth.middleware.js';
 
 const router = express.Router();
 
-router.use(requireAuth);
+router.use(requireAuth as any);
 
-router.post('/join', requireAuth, MatchmakingController.joinQueue);
-router.post('/leave', requireAuth, MatchmakingController.leaveQueue);
-router.post('/challenge', requireAuth, MatchmakingController.challengeUser);
-router.post('/challenge/:challengeId/accept', requireAuth, MatchmakingController.acceptChallenge);
+router.post('/join', requireAuth as any, MatchmakingController.joinQueue as any);
+router.post('/leave', requireAuth as any, MatchmakingController.leaveQueue as any);
 
 export default router;

@@ -9,7 +9,22 @@ export const useBattleSocket = (battleCode: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [battle, setBattle] = useState<any>(null);
   const [participants, setParticipants] = useState<string[]>([]);
-  const [submissionHistory, setSubmissionHistory] = useState<(SubmissionPendingPayload | SubmissionEvaluatedPayload | SubmissionVerdictPayload)[]>([]);
+  const [submissionHistory, setSubmissionHistory] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem(`battleFeed:${battleCode}`);
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`battleFeed:${battleCode}`, JSON.stringify(submissionHistory));
+    }
+  }, [submissionHistory, battleCode]);
+
   const [winner, setWinner] = useState<WinnerDeclaredPayload | null>(null);
   
   const socketRef = useRef<Socket | null>(null);
@@ -18,7 +33,41 @@ export const useBattleSocket = (battleCode: string) => {
     try {
       const res = await api.get(`/battles/${battleCode}`);
       if (res.data.success) {
-        setBattle(res.data.data.battle);
+        const fetchedBattle = res.data.data.battle;
+        setBattle(fetchedBattle);
+        
+        // Fetch submission history to sync battle field
+        if (fetchedBattle?._id) {
+          api.get(`/submissions/${fetchedBattle._id}`).then(subRes => {
+            if (subRes.data.success) {
+              const dbSubs = subRes.data.data.submissions.map((s: any) => ({
+                 submissionId: s._id,
+                 userId: s.user?._id || s.user,
+                 username: s.user?.username || 'User',
+                 verdict: s.status !== 'PENDING' ? s.status : undefined,
+                 status: s.status === 'PENDING' ? 'PENDING' : undefined,
+                 timestamp: new Date(s.submittedAt || s.createdAt).getTime()
+              })).reverse();
+              
+              setSubmissionHistory(prev => {
+                 const map = new Map();
+                 dbSubs.forEach((s: any) => map.set(s.submissionId, s));
+                 prev.forEach((p: any) => {
+                   if (p.submissionId) {
+                      const existing = map.get(p.submissionId);
+                      if (!existing || (p.verdict && !existing.verdict)) {
+                        map.set(p.submissionId, { ...existing, ...p });
+                      }
+                   } else {
+                      // fallback for events without submissionId
+                      map.set(Math.random().toString(), p);
+                   }
+                 });
+                 return Array.from(map.values()).sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0));
+              });
+            }
+          }).catch(() => {});
+        }
       }
     } catch (error) {
       toast.error('Battle not found');
@@ -95,20 +144,20 @@ export const useBattleSocket = (battleCode: string) => {
     });
 
     socket.on(SocketEvents.SUBMISSION_PENDING, (payload: SubmissionPendingPayload) => {
-      setSubmissionHistory(prev => [...prev, payload]);
+      setSubmissionHistory(prev => [...prev, { ...payload, timestamp: Date.now() }]);
     });
 
     socket.on(SocketEvents.SUBMISSION_EVALUATED, (payload: SubmissionEvaluatedPayload) => {
       setSubmissionHistory(prev => {
         const filtered = prev.filter(s => (s as any).submissionId !== payload.submissionId);
-        return [...filtered, payload];
+        return [...filtered, { ...payload, timestamp: Date.now() }];
       });
     });
 
     socket.on(SocketEvents.SUBMISSION_VERDICT, (payload: SubmissionVerdictPayload) => {
       setSubmissionHistory(prev => {
         const filtered = prev.filter(s => (s as any).submissionId !== payload.submissionId);
-        return [...filtered, payload];
+        return [...filtered, { ...payload, timestamp: Date.now() }];
       });
     });
 

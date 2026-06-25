@@ -11,9 +11,9 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { isSidebarVisible } = useUI();
   const pathname = usePathname();
 
-  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/profile', '/appearance'];
+  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/profile'];
   const showSidebar = isSidebarVisible && sidebarRoutes.some(route => pathname?.startsWith(route));
-  const showTopNav = pathname !== '/login' && pathname !== '/register' && pathname !== '/forgot-password';
+  const showTopNav = pathname !== '/login' && pathname !== '/register' && pathname !== '/forgot-password' && !pathname?.startsWith('/battle');
 
   return (
     <>

@@ -57,16 +57,20 @@ export const Sidebar = () => {
             History
           </Link>
           <Link href="/leaderboard" className={navItemClass('/leaderboard')}>
+            <span className="material-symbols-outlined text-[20px]">leaderboard</span>
+            Leaderboard
+          </Link>
+          <Link href="/performance" className={navItemClass('/performance')}>
             <span className="material-symbols-outlined text-[20px]">bar_chart</span>
             Performance
+          </Link>
+          <Link href="/tournaments" className={navItemClass('/tournaments')}>
+            <span className="material-symbols-outlined text-[20px]">emoji_events</span>
+            Tournaments
           </Link>
           <Link href="/profile" className={navItemClass('/profile')}>
             <span className="material-symbols-outlined text-[20px]">shield</span>
             Profile
-          </Link>
-          <Link href="/appearance" className={navItemClass('/appearance')}>
-            <span className="material-symbols-outlined text-[20px]">palette</span>
-            Appearance
           </Link>
         </nav>
       </div>
@@ -83,10 +87,7 @@ export const Sidebar = () => {
         )}
         
         <nav className="flex flex-col gap-xxs border-t border-surface-variant pt-sm">
-          <Link href="#" className="flex items-center gap-md px-md py-sm rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-150 font-label-caps text-label-caps uppercase tracking-widest">
-            <span className="material-symbols-outlined text-[20px]">help</span>
-            Help
-          </Link>
+
           {isAuthenticated && (
             <button 
               onClick={async () => {

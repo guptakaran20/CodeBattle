@@ -330,10 +330,10 @@ export default function ProfilePage() {
                   }).join(' ');
                   
                   return (
-                    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-[0_0_10px_rgba(var(--primary),0.3)]" preserveAspectRatio="none">
+                    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-md" preserveAspectRatio="none">
                       <polyline
                         fill="none"
-                        stroke="var(--primary)"
+                        stroke="var(--color-primary)"
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -343,7 +343,7 @@ export default function ProfilePage() {
                         const x = i * stepX;
                         const y = h - ((p - min) / range) * h;
                         return (
-                          <circle key={i} cx={x} cy={y} r="1.5" fill="var(--surface-container)" stroke="var(--primary)" strokeWidth="0.5" />
+                          <circle key={i} cx={x} cy={y} r="1.5" fill="var(--color-surface-container)" stroke="var(--color-primary)" strokeWidth="0.5" />
                         );
                       })}
                     </svg>

@@ -198,13 +198,15 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     const payload = verifyRefreshToken(token);
     const user = await User.findById(payload.userId);
 
+    const isProduction = process.env.NODE_ENV === 'production';
     if (!user || user.refreshTokenVersion !== payload.tokenVersion) {
+      res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+      res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
       return res.status(401).json({ success: false, message: 'Invalid refresh token', errorCode: 'AUTH_006' });
     }
 
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
     
-    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProduction,
@@ -214,6 +216,9 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     return res.status(200).json({ success: true, data: { message: 'Token refreshed' } });
   } catch (error) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
     return res.status(401).json({ success: false, message: 'Invalid or expired refresh token', errorCode: 'AUTH_007' });
   }
 };
@@ -224,8 +229,9 @@ export const logout = async (req: AuthenticatedRequest, res: Response, next: Nex
       await User.findByIdAndUpdate(req.user.id, { $inc: { refreshTokenVersion: 1 } });
     }
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
 
     return res.status(200).json({ success: true, data: { message: 'Logged out successfully' } });
   } catch (error) {

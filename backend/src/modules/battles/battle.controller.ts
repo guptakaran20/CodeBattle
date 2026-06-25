@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Battle } from './battle.model.js';
+import { User } from '../users/user.model.js';
 import { ReplayService } from '../replays/replay.service.js';
 import { Problem } from '../problems/problem.model.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
@@ -26,6 +27,15 @@ const createBattleSchema = z.object({
 
 export const createBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const activeBattle = await Battle.findOne({
+      'teams.members': req.user.id,
+      status: { $in: ['WAITING', 'IN_PROGRESS'] }
+    });
+
+    if (activeBattle) {
+      return res.status(400).json({ success: false, message: 'You are already in an active battle.' });
+    }
+
     const validatedData = createBattleSchema.parse(req.body);
 
     const problem = await Problem.findById(validatedData.problemId);
@@ -65,7 +75,8 @@ export const createBattle = async (req: AuthenticatedRequest, res: Response, nex
 export const getBattleHistory = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const battles = await Battle.find({ 'teams.members': req.user.id })
-      .select('battleCode status battleType battleMode durationMinutes createdAt')
+      .select('battleCode status battleType battleMode durationMinutes createdAt winner result teams problem')
+      .populate('problem', 'title')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({ success: true, data: { battles } });
@@ -95,7 +106,7 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
         await battle.save();
         
         await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Timeout' });
-        const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+        const participantIds = battle.teams.flatMap((t: any) => t.members.map((m: any) => m._id ? m._id.toString() : m.toString()));
         const ratingDeltas = await RatingService.updateBattleRatings(battle._id.toString(), null, participantIds, true);
         await ReplayService.createSummary(
           battle._id.toString(),
@@ -116,6 +127,12 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
         try {
           const io = getIO();
           BattleGatewayService.broadcastBattleUpdated(io, battle.battleCode, 'Battle duration expired');
+          
+          BattleGatewayService.broadcastGlobalFeed(io, {
+            event: 'BATTLE_ENDED',
+            winner: 'Time expired',
+            time: 'Just now'
+          });
         } catch (e) {
           console.error('Socket not initialized or failed to broadcast', e);
         }
@@ -136,6 +153,15 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
 
 export const joinBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const activeBattle = await Battle.findOne({
+      'teams.members': req.user.id,
+      status: { $in: ['WAITING', 'IN_PROGRESS'] }
+    });
+
+    if (activeBattle && activeBattle.battleCode !== req.params.battleCode) {
+      return res.status(400).json({ success: false, message: 'You are already in an active battle.' });
+    }
+
     const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
@@ -218,6 +244,14 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
       const io = getIO();
       const endTime = new Date(battle.startTime.getTime() + battle.durationMinutes * 60000);
       BattleGatewayService.broadcastBattleStarted(io, battle.battleCode, battle.startTime.toISOString(), endTime.toISOString());
+      
+      const pNames = battle.teams.flatMap((t: any) => t.members.map((m: any) => m.username || 'Player'));
+      BattleGatewayService.broadcastGlobalFeed(io, {
+        event: 'MATCH_STARTED',
+        users: pNames.length > 0 ? pNames : ['Unknown', 'Unknown'],
+        difficulty: battle.difficulty || 'MIXED',
+        time: 'Just now'
+      });
     } catch (e) {
       console.error('Socket not initialized or failed to broadcast', e);
     }
@@ -243,19 +277,7 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
       return res.status(400).json({ success: false, message: 'Battle is already finished or cancelled' });
     }
 
-    battle.status = 'CANCELLED';
-    await battle.save();
-
-    await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Cancelled by creator' });
-    const participantIds = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
-    await ReplayService.createSummary(
-      battle._id.toString(),
-      null,
-      participantIds,
-      battle.startTime || new Date(),
-      new Date(),
-      'CANCELLED'
-    );
+    await Battle.deleteOne({ _id: battle._id });
 
     try {
       const io = getIO();
@@ -264,7 +286,80 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
       console.error('Socket not initialized or failed to broadcast', e);
     }
 
-    return res.status(200).json({ success: true, data: { message: 'Battle cancelled' } });
+    return res.status(200).json({ success: true, data: { message: 'Battle deleted' } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const leaveBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
+    if (!battle) {
+      return res.status(404).json({ success: false, message: 'Battle not found' });
+    }
+
+    if (battle.status !== 'IN_PROGRESS' && battle.status !== 'WAITING') {
+      return res.status(400).json({ success: false, message: 'Battle is already finished or cancelled' });
+    }
+
+    const allMembers = battle.teams.flatMap((t: any) => t.members.map((id: any) => id.toString()));
+    if (!allMembers.includes(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'You are not a participant' });
+    }
+    
+    const opponentId = allMembers.find((id: string) => id !== req.user.id);
+
+    battle.status = 'COMPLETED';
+    battle.result = { winReason: 'MANUAL' };
+    
+    if (opponentId) {
+      battle.winner = opponentId as any;
+    }
+    
+    await battle.save();
+
+    if (battle.battleType === 'TOURNAMENT') {
+      await TournamentEngine.advanceWinner(battle._id.toString(), opponentId || null).catch(console.error);
+    }
+
+    await ReplayService.logEvent(battle._id.toString(), 'PlayerLeft', { userId: req.user.id });
+    await ReplayService.logEvent(battle._id.toString(), 'BattleCompleted', { reason: 'Forfeit', forfeitBy: req.user.id });
+    await ReplayService.createSummary(
+      battle._id.toString(),
+      opponentId || null,
+      allMembers,
+      battle.startTime || new Date(),
+      new Date(),
+      'FORFEIT'
+    );
+
+    if (opponentId) {
+      await RatingService.updateBattleRatings(battle._id.toString(), opponentId, allMembers, false).catch(console.error);
+    }
+
+    try {
+      const io = getIO();
+      if (opponentId) {
+         let winnerUsername = 'Unknown';
+         const opponent = await User.findById(opponentId);
+         if (opponent) winnerUsername = opponent.username;
+
+         BattleGatewayService.broadcastWinner(io, battle.battleCode, opponentId, winnerUsername, 'Opponent left the battle');
+         
+         const oppName = winnerUsername !== 'Unknown' ? winnerUsername : (allMembers.length > 0 ? 'Someone' : 'Player');
+         BattleGatewayService.broadcastGlobalFeed(io, {
+           event: 'BATTLE_ENDED',
+           winner: oppName,
+           time: 'Just now'
+         });
+      }
+      BattleGatewayService.broadcastBattleCompleted(io, battle.battleCode);
+    } catch (e) {
+      console.error('Socket not initialized or failed to broadcast', e);
+    }
+
+    return res.status(200).json({ success: true, data: { message: 'You have left the battle' } });
   } catch (error) {
     next(error);
   }

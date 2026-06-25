@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function ArenaDashboard() {
   const router = useRouter();
   const [battleCodeInput, setBattleCodeInput] = useState('');
-  const [challengeUser, setChallengeUser] = useState('');
   const [liveFeed, setLiveFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiTopic, setAiTopic] = useState('');
@@ -24,19 +23,35 @@ export default function ArenaDashboard() {
   
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const { isConnected, queueState, queueStatus, matchFound, incomingChallenge, setIncomingChallenge } = useMatchmakingSocket();
+  const { isConnected, queueState, queueStatus, matchFound } = useMatchmakingSocket();
 
   useEffect(() => {
-    // Mock fetching live battle feed
-    const timer = setTimeout(() => {
-      setLiveFeed([
-        { event: 'MATCH_STARTED', users: ['Karan', 'Rahul'], difficulty: 'HARD', time: 'Just now' },
-        { event: 'SUBMISSION', user: 'Alex', status: 'Accepted', time: '1m ago' },
-        { event: 'BATTLE_ENDED', winner: 'Sarah', time: '3m ago' },
-      ]);
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    // Initial fetch could be done here if there was an API for it
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // We need the raw socket to listen to the global namespace.
+    // useMatchmakingSocket doesn't expose the socket instance directly,
+    // so we can quickly connect a new one or modify the hook to export it.
+    // For simplicity, we just establish a quick connection to the root namespace
+    // to listen for GLOBAL_FEED_UPDATE.
+    
+    import('socket.io-client').then(({ io }) => {
+      const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+      const feedSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
+      
+      feedSocket.on('global_feed_update', (payload: any) => {
+        setLiveFeed(prev => {
+          const newFeed = [payload, ...prev];
+          return newFeed.slice(0, 5); // Keep max 5
+        });
+      });
+
+      return () => {
+        feedSocket.disconnect();
+      };
+    });
   }, []);
 
   useEffect(() => {
@@ -62,27 +77,6 @@ export default function ArenaDashboard() {
       await api.post('/matchmaking/leave');
     } catch (err: any) {
       toast.error('Failed to leave queue');
-    }
-  };
-
-  const handleChallenge = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!challengeUser.trim()) return;
-    try {
-      await api.post('/matchmaking/challenge', { targetUsername: challengeUser.trim() });
-      toast.success('Challenge sent!');
-      setChallengeUser('');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to send challenge');
-    }
-  };
-
-  const handleAcceptChallenge = async (challengeId: string) => {
-    try {
-      await api.post(`/matchmaking/challenge/${challengeId}/accept`);
-      setIncomingChallenge(null);
-    } catch (err: any) {
-      toast.error('Failed to accept challenge');
     }
   };
 
@@ -211,24 +205,6 @@ export default function ArenaDashboard() {
           <p className="text-lg text-muted-foreground mt-2">Compete in ranked 1v1s, practice, or challenge friends.</p>
         </div>
 
-        {incomingChallenge && (
-          <Card className="border-primary bg-primary/10 shadow-lg">
-            <CardContent className="flex items-center justify-between p-6">
-              <div className="flex items-center gap-4">
-                <Swords className="text-primary w-8 h-8 animate-bounce" />
-                <div>
-                  <h3 className="font-bold text-lg text-foreground font-headline">{incomingChallenge.senderUsername} challenged you!</h3>
-                  <p className="text-muted-foreground text-sm">Accept to instantly start a 1v1 battle.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setIncomingChallenge(null)}>Decline</Button>
-                <Button onClick={() => handleAcceptChallenge(incomingChallenge.challengeId)}>Accept Battle</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           
           {/* Main Matchmaking Col */}
@@ -325,18 +301,6 @@ export default function ArenaDashboard() {
 
           {/* Sidebar */}
           <div className="space-y-8">
-            <Card className="bg-surface border-border">
-              <CardHeader>
-                <CardTitle>Direct Challenge</CardTitle>
-                <CardDescription>Challenge someone online by username</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleChallenge} className="flex flex-col gap-3">
-                  <Input placeholder="Username" value={challengeUser} onChange={e => setChallengeUser(e.target.value)} className="bg-surface-bright" />
-                  <Button type="submit" variant="outline" className="w-full font-bold tracking-wider">SEND CHALLENGE</Button>
-                </form>
-              </CardContent>
-            </Card>
 
             <Card className="bg-surface border-border flex-1 h-full">
               <CardHeader>

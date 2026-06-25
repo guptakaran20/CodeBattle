@@ -22,7 +22,14 @@ api.interceptors.response.use(
     }
     
     // Basic automatic refresh mechanism
-    if (error.response && error.response.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh') {
+    if (
+      error.response && 
+      error.response.status === 401 && 
+      !originalRequest._retry && 
+      originalRequest.url !== '/auth/refresh' &&
+      originalRequest.url !== '/auth/login' &&
+      originalRequest.url !== '/auth/register'
+    ) {
       originalRequest._retry = true;
       try {
         await api.post('/auth/refresh');

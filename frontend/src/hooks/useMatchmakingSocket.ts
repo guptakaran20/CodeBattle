@@ -8,7 +8,6 @@ export const useMatchmakingSocket = () => {
   const [queueState, setQueueState] = useState<{ isQueued: boolean; difficulty?: string }>({ isQueued: false });
   const [queueStatus, setQueueStatus] = useState<QueueStatusPayload | null>(null);
   const [matchFound, setMatchFound] = useState<MatchFoundPayload | null>(null);
-  const [incomingChallenge, setIncomingChallenge] = useState<ChallengeReceivedPayload | null>(null);
   
   const socketRef = useRef<Socket | null>(null);
 
@@ -55,18 +54,6 @@ export const useMatchmakingSocket = () => {
       setMatchFound(payload);
     });
 
-    socket.on(SocketEvents.CHALLENGE_RECEIVED, (payload: ChallengeReceivedPayload) => {
-      setIncomingChallenge(payload);
-      toast(`Incoming Challenge from ${payload.senderUsername}!`, {
-        action: {
-          label: 'Accept',
-          onClick: () => {
-            // Can be handled directly via API or state
-          }
-        }
-      });
-    });
-
     socket.on(SocketEvents.CHALLENGE_ACCEPTED, (payload: ChallengeAcceptedPayload) => {
       toast.success('Challenge accepted! Creating match...');
       // Note: Full implementation would redirect or wait for MATCH_FOUND if handled securely
@@ -85,8 +72,6 @@ export const useMatchmakingSocket = () => {
     isConnected,
     queueState,
     queueStatus,
-    matchFound,
-    incomingChallenge,
-    setIncomingChallenge
+    matchFound
   };
 };

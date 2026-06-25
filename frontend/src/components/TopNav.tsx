@@ -13,7 +13,7 @@ export const TopNav = () => {
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
   
-  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/profile', '/appearance'];
+  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/performance', '/tournaments', '/profile'];
   const hasSidebar = sidebarRoutes.some(route => pathname?.startsWith(route));
 
   const navItemClass = (path: string) => `
@@ -55,9 +55,6 @@ export const TopNav = () => {
             <button className="text-on-surface-variant hover:text-primary transition-colors">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <Link href="/appearance" className="text-on-surface-variant hover:text-primary transition-colors">
-              <span className="material-symbols-outlined">palette</span>
-            </Link>
             <Link href="/profile" className="w-8 h-8 rounded bg-surface-variant border border-surface-variant flex items-center justify-center font-bold text-primary hover:opacity-80">
               {user?.username?.charAt(0).toUpperCase()}
             </Link>

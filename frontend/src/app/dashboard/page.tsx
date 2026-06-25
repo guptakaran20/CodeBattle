@@ -30,14 +30,14 @@ export default function Dashboard() {
           api.get('/battles')
         ]);
         if (profileRes.data.success) {
-          const s = profileRes.data.data.user?.statistics || {};
-          const wins = s.wins || 0;
-          const total = s.totalBattles || 0;
-          const losses = total - wins;
+          const userObj = profileRes.data.data.user || {};
+          const wins = userObj.wins || 0;
+          const total = userObj.battlesPlayed || 0;
+          const losses = userObj.losses || 0;
           const winRate = total ? Math.round((wins / total) * 100) : 0;
           
           setStats({
-            rating: profileRes.data.data.user?.rating || 1500,
+            rating: userObj.rating || 1500,
             battlesWon: wins,
             totalBattles: total,
             losses,
@@ -60,15 +60,17 @@ export default function Dashboard() {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
           for (const b of sortedBattles) {
-            // Check if user won
             let isWin = false;
+            let isDraw = false;
             if (b.winner === uId) isWin = true;
+            else if (b.winner && b.winner._id === uId) isWin = true;
             else if (b.teams) {
               const myTeam = b.teams.find((t: any) => t.members.includes(uId) || t.members.some((m: any) => m._id === uId));
               if (myTeam && b.result?.winningTeamId === myTeam.teamId) isWin = true;
+              else if (!b.winner && !b.result?.winningTeamId) isDraw = true;
             }
 
-            const change = isWin ? 15 : -15;
+            const change = isWin ? 15 : (isDraw ? 0 : -15);
             const prev = points[points.length - 1] - change;
             points.push(prev);
 
@@ -271,35 +273,60 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y divide-surface-variant">
                 {displayBattles.map((b: any, i: number) => {
-                  const isWin = b.status === 'Win';
-                  const isLoss = b.status === 'Loss';
+                  let isWin = false;
+                  const uId = user?._id || user?.id;
+                  if (b.winner === uId) isWin = true;
+                  else if (b.winner && b.winner._id === uId) isWin = true;
+                  else if (b.teams) {
+                    const myTeam = b.teams.find((t: any) => t.members.includes(uId) || t.members.some((m: any) => m._id === uId));
+                    if (myTeam && b.result?.winningTeamId === myTeam.teamId) isWin = true;
+                  }
                   
-                  // For actual API battles that use "COMPLETED" etc
-                  const displayStatus = b.status === 'COMPLETED' ? 'Win' : b.status; 
-                  const visualWin = displayStatus === 'Win' || displayStatus === 'COMPLETED';
+                  let displayStatus = b.status;
+                  if (b.status === 'COMPLETED') {
+                     displayStatus = isWin ? 'Win' : 'Loss';
+                  } else if (b.status === 'Win' || b.status === 'Loss') {
+                     // For mock battles
+                     displayStatus = b.status;
+                     isWin = b.status === 'Win';
+                  }
+                  
+                  const visualWin = displayStatus === 'Win';
 
                   let diffColor = 'text-on-surface-variant';
                   if (b.difficulty === 'Easy') diffColor = 'text-emerald-400';
                   else if (b.difficulty === 'Medium') diffColor = 'text-primary';
                   else if (b.difficulty === 'Hard') diffColor = 'text-error';
+                  
+                  let dateStr = b.date;
+                  if (!dateStr && b.createdAt) {
+                    const d = new Date(b.createdAt);
+                    const now = new Date();
+                    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 3600 * 24));
+                    if (diffDays === 0) dateStr = 'Today';
+                    else if (diffDays === 1) dateStr = 'Yesterday';
+                    else dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                  }
 
                   return (
                     <tr key={i} className="hover:bg-surface-container-high transition-colors group">
                       <td className="py-4 px-6">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-code-sm border ${
-                          visualWin ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-error/10 border-error/30 text-error'
+                          visualWin ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 
+                          displayStatus === 'Loss' ? 'bg-error/10 border-error/30 text-error' :
+                          'bg-surface-variant/50 border-surface-variant text-on-surface-variant'
                         }`}>
                           {displayStatus}
                         </span>
                       </td>
                       <td className="py-4 px-6 font-code-sm text-sm text-on-surface group-hover:text-primary transition-colors">
-                        {b.problem || b.battleCode}
+                        {b.problem?.title || (typeof b.problem === 'string' ? b.problem : '') || b.battleCode}
                       </td>
                       <td className={`py-4 px-6 font-code-sm text-sm ${diffColor}`}>
                         {b.difficulty || 'Mixed'}
                       </td>
                       <td className="py-4 px-6 font-code-sm text-sm text-on-surface-variant text-right">
-                        {b.date || 'Just now'}
+                        {dateStr || 'Just now'}
                       </td>
                     </tr>
                   )
