@@ -6,6 +6,7 @@ import { User } from '../users/user.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
 import { BattleGatewayService } from '../websockets/battle.gateway.js';
+import { NotificationService } from '../../services/notifications/NotificationService.js';
 
 export class MatchmakingEngine {
   private static intervalId: NodeJS.Timeout | null = null;
@@ -102,6 +103,14 @@ export class MatchmakingEngine {
                     battleCode: battle.battleCode,
                     opponentId: oppId
                   });
+
+                  NotificationService.send(userId, {
+                    type: 'MATCH_FOUND',
+                    title: 'Match Found!',
+                    message: 'Your competitive programming battle is starting.',
+                    data: { battleCode: battle.battleCode }
+                  }).catch(console.error);
+                  
                   // Emit global feed
                   const creatorUser = await User.findById(userId).select('username');
                   const oppUsername = opponentUser.username;
@@ -194,8 +203,21 @@ export class MatchmakingEngine {
 
           // To userId
           io?.to(`user_${userId}`).emit(SocketEvents.MATCH_FOUND, { ...payload, opponentId: oppId });
+          NotificationService.send(userId, {
+            type: 'MATCH_FOUND',
+            title: 'Match Found!',
+            message: 'Your competitive programming battle is starting.',
+            data: { battleCode: battle.battleCode }
+          }).catch(console.error);
+
           // To oppId
           io?.to(`user_${oppId}`).emit(SocketEvents.MATCH_FOUND, { ...payload, opponentId: userId });
+          NotificationService.send(oppId, {
+            type: 'MATCH_FOUND',
+            title: 'Match Found!',
+            message: 'Your competitive programming battle is starting.',
+            data: { battleCode: battle.battleCode }
+          }).catch(console.error);
 
           // 5. Emit global feed
           const u1 = await User.findById(userId).select('username');

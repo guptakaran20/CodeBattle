@@ -6,6 +6,7 @@ import { Battle } from '../battles/battle.model.js';
 import { Problem } from '../problems/problem.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { nanoid } from 'nanoid';
+import { NotificationService } from '../../services/notifications/NotificationService.js';
 
 export class TournamentEngine {
 
@@ -80,6 +81,16 @@ export class TournamentEngine {
       { $set: { status: 'ACTIVE' } }
     );
 
+    const activeParticipants = await TournamentParticipant.find({ tournamentId: tournament._id, status: 'ACTIVE' });
+    for (const p of activeParticipants) {
+      NotificationService.send(p.userId.toString(), {
+        type: 'TOURNAMENT_STARTED',
+        title: 'Tournament Started',
+        message: 'The tournament has begun! Check your bracket for your first match.',
+        data: { tournamentId: tournament._id.toString() }
+      }).catch(console.error);
+    }
+
     // Broadcast
     const io = getIO();
     if (io) {
@@ -119,6 +130,13 @@ export class TournamentEngine {
         { tournamentId: match.tournamentId, userId: loserId },
         { $set: { status: 'ELIMINATED', finalPosition: finalPosition } }
       );
+      
+      NotificationService.send(loserId.toString(), {
+        type: 'TOURNAMENT_ELIMINATED',
+        title: 'Tournament Eliminated',
+        message: 'You have been eliminated from the tournament. Better luck next time!',
+        data: { tournamentId: match.tournamentId.toString() }
+      }).catch(console.error);
     }
 
     const io = getIO();
@@ -143,6 +161,13 @@ export class TournamentEngine {
             await this.spawnBattle(tournament, nextMatch);
             if (io) io.emit(`tournament_${tournament._id}`, { type: 'TOURNAMENT_UPDATED' });
           }
+        } else {
+          NotificationService.send(advancedUserId.toString(), {
+            type: 'TOURNAMENT_ADVANCED',
+            title: 'Round Advanced',
+            message: 'You advanced to the next round! Waiting for your opponent...',
+            data: { tournamentId: match.tournamentId.toString() }
+          }).catch(console.error);
         }
       }
     } else {
@@ -158,6 +183,13 @@ export class TournamentEngine {
           { tournamentId: match.tournamentId, userId: advancedUserId },
           { $set: { status: 'ELIMINATED', finalPosition: 1 } } // ELIMINATED is just terminal state, maybe keeping ACTIVE is better or a new state.
         );
+        
+        NotificationService.send(advancedUserId.toString(), {
+          type: 'TOURNAMENT_ADVANCED',
+          title: 'Tournament Won!',
+          message: 'Congratulations! You are the champion of the tournament.',
+          data: { tournamentId: match.tournamentId.toString() }
+        }).catch(console.error);
 
         if (io) io.emit(`tournament_${tournament._id}`, { type: 'TOURNAMENT_COMPLETED', winnerId: advancedUserId });
       }

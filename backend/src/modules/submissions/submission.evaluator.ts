@@ -8,6 +8,7 @@ import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
 import { LeaderboardService } from '../../services/redis/LeaderboardService.js';
 import { RatingService } from '../../services/ranking/RatingService.js';
 import { TournamentEngine } from '../tournaments/tournament.engine.js';
+import { NotificationService } from '../../services/notifications/NotificationService.js';
 
 export const evaluateSubmissionResult = async (submissionId: string, judge0Results: any[]) => {
   const submission = await Submission.findById(submissionId).populate('user');
@@ -181,6 +182,25 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
           });
           io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.BATTLE_COMPLETED, {
             battleCode: battle.battleCode
+          });
+
+          // Send notifications
+          participantIds.forEach(pId => {
+            if (pId === user._id.toString()) {
+              NotificationService.send(pId, {
+                type: 'BATTLE_WON',
+                title: 'Victory!',
+                message: 'You have won the battle by solving the problem first.',
+                data: { battleCode: battle.battleCode, replayId: battle.battleCode }
+              }).catch(console.error);
+            } else {
+              NotificationService.send(pId, {
+                type: 'BATTLE_LOST',
+                title: 'Defeat',
+                message: `${user.username} solved the problem before you.`,
+                data: { battleCode: battle.battleCode, replayId: battle.battleCode }
+              }).catch(console.error);
+            }
           });
         }
       }

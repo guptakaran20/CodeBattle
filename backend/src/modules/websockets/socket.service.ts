@@ -51,6 +51,21 @@ export const initializeSocket = (httpServer: HttpServer) => {
   // Initialize Gateways
   initializeBattleGateway(io);
 
+  // Subscribe to Notification events from Redis
+  const notificationSub = pubClient.duplicate();
+  notificationSub.subscribe('notifications:pubsub').catch(console.error);
+  notificationSub.on('message', (channel, message) => {
+    if (channel === 'notifications:pubsub') {
+      try {
+        const payload = JSON.parse(message);
+        const { userId, event, notification, notificationId } = payload;
+        io.to(`user_${userId}`).emit(event, { notification, notificationId });
+      } catch (err) {
+        console.error('Failed to parse notification pubsub message:', err);
+      }
+    }
+  });
+
   return io;
 };
 

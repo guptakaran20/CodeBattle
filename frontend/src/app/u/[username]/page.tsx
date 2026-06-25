@@ -204,11 +204,11 @@ export default function PublicProfilePage() {
                         fontSize={12}
                         tickMargin={10}
                       />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#333', borderRadius: '8px' }}
-                        itemStyle={{ color: '#f59e0b', fontWeight: 'bold' }}
-                        labelFormatter={(label) => new Date(label).toLocaleString()}
-                        formatter={(value: number) => [`${value} ELO`, 'Rating']}
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--surface-container-high))', borderColor: 'hsl(var(--surface-variant))', borderRadius: '8px', color: 'hsl(var(--on-surface))' }}
+                        itemStyle={{ color: 'hsl(var(--primary))' }}
+                        formatter={(value: any) => [`${value} ELO`, 'Rating']}
+                        labelStyle={{ color: 'hsl(var(--on-surface-variant))' }}
                       />
                       <Line 
                         type="monotone" 

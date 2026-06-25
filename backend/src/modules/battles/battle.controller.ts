@@ -11,6 +11,7 @@ import { getIO } from '../websockets/socket.service.js';
 import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
 import { RatingService } from '../../services/ranking/RatingService.js';
 import { TournamentEngine } from '../tournaments/tournament.engine.js';
+import { NotificationService } from '../../services/notifications/NotificationService.js';
 
 const createBattleSchema = z.object({
   battleType: z.enum(['ONE_VS_ONE', 'TWO_VS_TWO', 'FOUR_VS_FOUR', 'TOURNAMENT']),
@@ -90,7 +91,7 @@ export const getBattle = async (req: Request, res: Response, next: NextFunction)
     const battle = await Battle.findOne({ battleCode: req.params.battleCode as string })
       .populate('problem', 'title slug difficulty description examples constraints testcases starterCode')
       .populate('creator', 'username name')
-      .populate('teams.members', 'username name avatar');
+      .populate('teams.members', 'username name avatar rating');
       
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
@@ -242,6 +243,16 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
 
     await ReplayService.logEvent(battle._id.toString(), 'BattleStarted', { startTime: battle.startTime });
 
+    // Notify all participants
+    allMembers.forEach(memberId => {
+      NotificationService.send(memberId.toString(), {
+        type: 'BATTLE_STARTED',
+        title: 'Battle Started!',
+        message: 'Your battle has begun. Good luck!',
+        data: { battleCode: battle.battleCode }
+      }).catch(console.error);
+    });
+
     try {
       const io = getIO();
       const endTime = new Date(battle.startTime.getTime() + battle.durationMinutes * 60000);
@@ -338,7 +349,23 @@ export const leaveBattle = async (req: AuthenticatedRequest, res: Response, next
 
     if (opponentId) {
       await RatingService.updateBattleRatings(battle._id.toString(), opponentId, allMembers, false).catch(console.error);
+      
+      // Notify Opponent
+      NotificationService.send(opponentId, {
+        type: 'BATTLE_WON',
+        title: 'Battle Won!',
+        message: 'Your opponent forfeited the match.',
+        data: { battleCode: battle.battleCode, replayId: battle.battleCode }
+      }).catch(console.error);
     }
+    
+    // Notify User
+    NotificationService.send(req.user.id, {
+      type: 'BATTLE_LOST',
+      title: 'Battle Forfeited',
+      message: 'You have left the battle and forfeited.',
+      data: { battleCode: battle.battleCode, replayId: battle.battleCode }
+    }).catch(console.error);
 
     try {
       const io = getIO();

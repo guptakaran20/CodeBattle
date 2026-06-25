@@ -2,6 +2,7 @@ import { User } from '../../modules/users/user.model.js';
 import { UserRatingEvent } from '../../modules/leaderboard/userRatingEvent.model.js';
 import { LeaderboardService } from '../redis/LeaderboardService.js';
 import { Types } from 'mongoose';
+import { NotificationService } from '../notifications/NotificationService.js';
 
 export class RatingService {
   private static K_FACTOR = 32;
@@ -138,5 +139,27 @@ export class RatingService {
     });
 
     await LeaderboardService.updateUserRank(user._id.toString(), newRating);
+
+    // Send Notification
+    if (delta !== 0) {
+      const isPositive = delta > 0;
+      const oldRank = this.getRankBoundary(oldRating);
+      const newRank = this.getRankBoundary(newRating);
+      
+      let title = isPositive ? 'Rating Increased' : 'Rating Decreased';
+      let message = `${isPositive ? '+' : ''}${delta} Rating`;
+      
+      if (oldRank !== newRank && isPositive) {
+        title = 'New Rank Unlocked!';
+        message = `Congratulations! You have reached ${newRank}.`;
+      }
+      
+      NotificationService.send(user._id.toString(), {
+        type: 'RATING_CHANGED',
+        title,
+        message,
+        data: { battleCode: battleId } // Using battleId as code if it's passed that way, or just store it.
+      }).catch(console.error);
+    }
   }
 }

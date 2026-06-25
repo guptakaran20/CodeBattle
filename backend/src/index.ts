@@ -18,6 +18,7 @@ import matchmakingRoutes from './modules/matchmaking/matchmaking.routes.js';
 import statsRoutes from './modules/stats/stats.routes.js';
 import replayRoutes from './modules/replays/replay.routes.js';
 import tournamentRoutes from './modules/tournaments/tournament.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
 import { ReplayWorker } from './workers/replay.worker.js';
 import { initializeSocket } from './modules/websockets/socket.service.js';
 import { MatchmakingEngine } from './modules/matchmaking/matchmaking.engine.js';
@@ -63,6 +64,7 @@ app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/replays', replayRoutes);
 app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: { status: 'ok', message: 'Backend is healthy' } });
