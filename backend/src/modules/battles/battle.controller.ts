@@ -209,7 +209,9 @@ export const joinBattle = async (req: AuthenticatedRequest, res: Response, next:
 
 export const startBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
+    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string })
+      .populate('teams.members')
+      .populate('problem');
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }
@@ -249,7 +251,7 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
       BattleGatewayService.broadcastGlobalFeed(io, {
         event: 'MATCH_STARTED',
         users: pNames.length > 0 ? pNames : ['Unknown', 'Unknown'],
-        difficulty: battle.difficulty || 'MIXED',
+        difficulty: (battle.problem as any)?.difficulty || 'MIXED',
         time: 'Just now'
       });
     } catch (e) {

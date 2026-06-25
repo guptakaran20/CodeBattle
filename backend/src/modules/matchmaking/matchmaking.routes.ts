@@ -8,5 +8,6 @@ router.use(requireAuth as any);
 
 router.post('/join', requireAuth as any, MatchmakingController.joinQueue as any);
 router.post('/leave', requireAuth as any, MatchmakingController.leaveQueue as any);
+router.get('/feed', requireAuth as any, MatchmakingController.getFeedHistory as any);
 
 export default router;

@@ -26,8 +26,15 @@ export default function ArenaDashboard() {
   const { isConnected, queueState, queueStatus, matchFound } = useMatchmakingSocket();
 
   useEffect(() => {
-    // Initial fetch could be done here if there was an API for it
-    setLoading(false);
+    // Initial fetch of live feed
+    api.get('/matchmaking/feed')
+      .then(res => {
+        if (res.data.success && res.data.data) {
+          setLiveFeed(res.data.data);
+        }
+      })
+      .catch(err => console.error('Failed to load feed history', err))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -43,7 +50,12 @@ export default function ArenaDashboard() {
       
       feedSocket.on('global_feed_update', (payload: any) => {
         setLiveFeed(prev => {
-          const newFeed = [payload, ...prev];
+          // Remove duplicate if it's the same battle
+          let newFeed = prev;
+          if (payload.battleCode) {
+            newFeed = prev.filter(item => item.battleCode !== payload.battleCode);
+          }
+          newFeed = [payload, ...newFeed];
           return newFeed.slice(0, 5); // Keep max 5
         });
       });

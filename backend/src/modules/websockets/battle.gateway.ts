@@ -9,6 +9,9 @@ import { ReplayService } from '../replays/replay.service.js';
 // Track disconnect timeouts: userId -> NodeJS.Timeout
 const userDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
+// Global Feed History
+const feedHistory: any[] = [];
+
 export const initializeBattleGateway = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     const user = (socket as any).user;
@@ -139,6 +142,19 @@ export const BattleGatewayService = {
   },
 
   broadcastGlobalFeed: (io: Server, payload: any) => {
+    // Remove previous events for the same battle to avoid duplicates
+    if (payload.battleCode) {
+      const index = feedHistory.findIndex(item => item.battleCode === payload.battleCode);
+      if (index !== -1) feedHistory.splice(index, 1);
+    }
+    
+    feedHistory.unshift(payload);
+    if (feedHistory.length > 5) feedHistory.pop();
+    
     io.emit(SocketEvents.GLOBAL_FEED_UPDATE, payload);
+  },
+
+  getFeedHistory: () => {
+    return feedHistory;
   }
 };

@@ -102,6 +102,16 @@ export class MatchmakingEngine {
                     battleCode: battle.battleCode,
                     opponentId: oppId
                   });
+                  // Emit global feed
+                  const creatorUser = await User.findById(userId).select('username');
+                  const oppUsername = opponentUser.username;
+                  BattleGatewayService.broadcastGlobalFeed(io, {
+                    event: 'MATCH_STARTED',
+                    battleCode: battle.battleCode,
+                    users: [creatorUser?.username || 'Player', oppUsername || 'Bot'],
+                    difficulty: difficulty,
+                    time: 'Just now'
+                  });
                 }
               } catch (e) {
                 console.error('Error creating bot match:', e);
@@ -188,11 +198,12 @@ export class MatchmakingEngine {
           io?.to(`user_${oppId}`).emit(SocketEvents.MATCH_FOUND, { ...payload, opponentId: userId });
 
           // 5. Emit global feed
-          const p1 = await MatchmakingService.getPlayerState(userId);
-          const p2 = await MatchmakingService.getPlayerState(oppId);
+          const u1 = await User.findById(userId).select('username');
+          const u2 = await User.findById(oppId).select('username');
           BattleGatewayService.broadcastGlobalFeed(io, {
             event: 'MATCH_STARTED',
-            users: ['Player', 'Player'], // Could fetch usernames if needed
+            battleCode: battle.battleCode,
+            users: [u1?.username || 'Player', u2?.username || 'Player'],
             difficulty: difficulty,
             time: 'Just now'
           });

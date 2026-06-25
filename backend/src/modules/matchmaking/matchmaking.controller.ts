@@ -5,6 +5,7 @@ import type { Difficulty } from '../../services/redis/MatchmakingService.js';
 import { redis } from '../../config/redis.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
+import { BattleGatewayService } from '../websockets/battle.gateway.js';
 import { User } from '../users/user.model.js';
 import { Battle } from '../battles/battle.model.js';
 
@@ -63,6 +64,16 @@ export const MatchmakingController = {
       res.status(200).json({ success: true, message: 'Left queue successfully' });
     } catch (error) {
       console.error('Leave queue error:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  },
+
+  getFeedHistory: async (req: Request, res: Response) => {
+    try {
+      const history = BattleGatewayService.getFeedHistory();
+      res.status(200).json({ success: true, data: history });
+    } catch (error) {
+      console.error('Get feed error:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
