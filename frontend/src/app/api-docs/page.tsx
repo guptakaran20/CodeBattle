@@ -187,8 +187,8 @@ export default function ApiDocsPage() {
   {'}'})
 {'}'});
 
-<span className="text-gray-500">// The server responds with a Set-Cookie header containing the JWT token.</span>
-<span className="text-gray-500">// Subsequent requests will automatically include this cookie.</span>
+<span className="text-gray-500">{'// The server responds with a Set-Cookie header containing the JWT token.'}</span>
+<span className="text-gray-500">{'// Subsequent requests will automatically include this cookie.'}</span>
                   </pre>
                 </div>
               </div>

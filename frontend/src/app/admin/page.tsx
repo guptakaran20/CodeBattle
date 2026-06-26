@@ -24,19 +24,6 @@ export default function AdminDashboardPage() {
     startTime: ''
   });
 
-  useEffect(() => {
-    // Only allow ADMIN role
-    if (user && user.role !== 'ADMIN') {
-      router.push('/dashboard');
-      return;
-    }
-
-    if (user && user.role === 'ADMIN') {
-      fetchTournaments();
-      checkHealth();
-    }
-  }, [user, router]);
-
   const checkHealth = async () => {
     try {
       // Direct fetch for base URL without /api prefix
@@ -63,6 +50,18 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN') {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (user && user.role === 'ADMIN') {
+      fetchTournaments();
+      checkHealth();
+    }
+  }, [user, router]);
 
   const handleCreateTournament = async (e: React.FormEvent) => {
     e.preventDefault();

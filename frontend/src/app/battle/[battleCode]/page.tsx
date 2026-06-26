@@ -108,7 +108,7 @@ export default function BattleLobbyPage() {
     const memberId = member._id || member;
     const isOnline = onlineParticipants.includes(memberId);
     // Find member details if populated from teams array
-    let memberDetails = typeof member === 'object' ? member : null;
+    const memberDetails = typeof member === 'object' ? member : null;
     
     // We should ideally fetch the full details from the backend if it's just an ID,
     // but the backend `getBattleByCode` currently populates `teams.members`.

@@ -20,6 +20,25 @@ export default function TournamentDetailsPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [optimisticRegistered, setOptimisticRegistered] = useState(false);
 
+  const fetchData = async () => {
+    try {
+      const res = await api.get(`/tournaments/${id}`);
+      if (res.data.success) {
+        setTournament(res.data.data.tournament);
+        setParticipants(res.data.data.participants);
+        setMatches(res.data.data.matches);
+        
+        // Reset optimistic state if actual state arrives
+        const myRecord = res.data.data.participants.find((p: any) => p.userId._id === user?._id);
+        if (myRecord) setOptimisticRegistered(true);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchData();
@@ -42,25 +61,6 @@ export default function TournamentDetailsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const fetchData = async () => {
-    try {
-      const res = await api.get(`/tournaments/${id}`);
-      if (res.data.success) {
-        setTournament(res.data.data.tournament);
-        setParticipants(res.data.data.participants);
-        setMatches(res.data.data.matches);
-        
-        // Reset optimistic state if actual state arrives
-        const myRecord = res.data.data.participants.find((p: any) => p.userId._id === user?._id);
-        if (myRecord) setOptimisticRegistered(true);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleJoin = async () => {
     if (isRegistering) return;
@@ -108,7 +108,7 @@ export default function TournamentDetailsPage() {
   const getBracketMatches = () => {
     if (matches.length === 0) return [];
     return matches.map((m) => {
-      let nextMatchId = m.nextMatchId || null;
+      const nextMatchId = m.nextMatchId || null;
       return {
         id: m._id,
         name: `Round ${m.round} - Match ${m.matchIndex + 1}`,
