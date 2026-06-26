@@ -13,8 +13,19 @@ export class GeminiProvider implements IAIProvider {
   }
 
   async generateCodeReview(submissionCode: string, language: string, problemDescription: string): Promise<CodeReviewResult> {
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('⚠️ GEMINI_API_KEY is missing. Returning a mock code review.');
+      return {
+        timeComplexity: "O(n)",
+        spaceComplexity: "O(n)",
+        missedEdgeCases: ["Handling empty inputs", "Extremely large inputs"],
+        bestPracticesScore: 85,
+        markdownCritique: "### Mock Code Review\n\nYour code looks generally good! Since you haven't configured a Gemini API key yet, this is a mock review.\n\n- **Strengths:** Good variable naming and logical flow.\n- **Suggestions:** Consider optimizing the inner loop."
+      };
+    }
+
     const model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash', 
+      model: 'gemini-2.5-flash', 
       generationConfig: { responseMimeType: 'application/json' } 
     });
     
@@ -41,8 +52,29 @@ export class GeminiProvider implements IAIProvider {
   }
 
   async generateSimilarProblem(topicOrBaseProblem: string): Promise<GeneratedProblem> {
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('⚠️ GEMINI_API_KEY is missing. Returning a mock similar problem.');
+      return {
+        title: `Variant of ${topicOrBaseProblem}`,
+        description: `This is a dynamically generated mock variant of **${topicOrBaseProblem}**.\n\nGiven an array of integers \`nums\` and an integer \`target\`, find the number of pairs that sum up to \`target\`.\n\n**Constraints:**\n- \`1 <= nums.length <= 10^5\`\n- \`-10^9 <= nums[i] <= 10^9\``,
+        examples: [
+          { input: "nums = [1, 2, 3, 4], target = 5", output: "2", explanation: "1+4=5 and 2+3=5" }
+        ],
+        starterCode: {
+          CPP: "class Solution {\npublic:\n    int findPairs(vector<int>& nums, int target) {\n        return 0;\n    }\n};",
+          JAVA: "class Solution {\n    public int findPairs(int[] nums, int target) {\n        return 0;\n    }\n}",
+          PYTHON: "class Solution:\n    def findPairs(self, nums, target):\n        return 0"
+        },
+        testcases: [
+          { input: "1 2 3 4\n5", expectedOutput: "2", isHidden: false },
+          { input: "1 1 1\n2", expectedOutput: "3", isHidden: true }
+        ],
+        difficulty: "MEDIUM"
+      };
+    }
+
     const model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-pro', 
+      model: 'gemini-2.5-flash', 
       generationConfig: { responseMimeType: 'application/json' } 
     });
 

@@ -1,5 +1,6 @@
 import type { SubmissionProcessor } from './SubmissionProcessor.js';
 import { Submission } from '../submission.model.js';
+import { ProblemTestSuite } from '../../problems/problemTestSuite.model.js';
 import { Judge0Service, LANGUAGE_MAPPING } from '../judge0.service.js';
 import { evaluateSubmissionResult } from '../submission.evaluator.js';
 
@@ -10,7 +11,10 @@ export class PollingSubmissionProcessor implements SubmissionProcessor {
     
     const problem = submission.problem as any;
     
-    const judge0Submissions = problem.testcases.map((tc: any) => ({
+    const testSuite = await ProblemTestSuite.findOne({ problemId: problem._id, version: problem.versions.testSuiteVersion });
+    if (!testSuite) return;
+
+    const judge0Submissions = testSuite.cases.map((tc: any) => ({
       language_id: LANGUAGE_MAPPING[submission.language],
       source_code: submission.code,
       stdin: tc.input,

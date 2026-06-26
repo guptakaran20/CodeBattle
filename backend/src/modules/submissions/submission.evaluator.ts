@@ -3,6 +3,7 @@ import { ReplayService } from '../replays/replay.service.js';
 import { Battle } from '../battles/battle.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SocketEvents } from '../websockets/events.js';
+import { BattleGatewayService } from '../websockets/battle.gateway.js';
 import { SubmissionCacheService } from '../../services/redis/SubmissionCacheService.js';
 import { BattleCacheService } from '../../services/redis/BattleCacheService.js';
 import { LeaderboardService } from '../../services/redis/LeaderboardService.js';
@@ -123,6 +124,20 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
   // Actually, let's just emit the public one to the battle room.
   io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.SUBMISSION_VERDICT, publicPayload);
 
+  // Emit to global feed if it's ACCEPTED
+  if (finalStatus === 'ACCEPTED') {
+    try {
+      BattleGatewayService.broadcastGlobalFeed(io as any, {
+        event: 'SUBMISSION',
+        user: user.username,
+        battleCode: battle.battleCode,
+        time: 'Just now'
+      });
+    } catch (e) {
+      console.error('Failed to emit to global feed', e);
+    }
+  }
+
   // 3. Evaluate Battle Win Condition
   if (battle.status === 'IN_PROGRESS' && finalStatus === 'ACCEPTED') {
     // Check if winner already exists (Atomic constraint in real logic, here we check the field)
@@ -183,6 +198,16 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
           io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.BATTLE_COMPLETED, {
             battleCode: battle.battleCode
           });
+
+          // Emit BATTLE_ENDED to global feed
+          try {
+            BattleGatewayService.broadcastGlobalFeed(io as any, {
+              event: 'BATTLE_ENDED',
+              winner: user.username,
+              battleCode: battle.battleCode,
+              time: 'Just now'
+            });
+          } catch(e) {}
 
           // Send notifications
           participantIds.forEach(pId => {

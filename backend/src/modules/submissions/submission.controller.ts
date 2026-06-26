@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Submission } from './submission.model.js';
 import { Battle } from '../battles/battle.model.js';
 import { Problem } from '../problems/problem.model.js';
+import { ProblemTestSuite } from '../problems/problemTestSuite.model.js';
 import { ReplayService } from '../replays/replay.service.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
@@ -96,8 +97,13 @@ export const runSubmission = async (req: AuthenticatedRequest, res: Response, ne
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
 
-    // Only run visible testcases
-    const visibleTestcases = problem.testcases.filter((tc: any) => !tc.isHidden);
+    const testSuite = await ProblemTestSuite.findOne({ problemId: problem._id, version: problem.versions.testSuiteVersion });
+    if (!testSuite) {
+      return res.status(500).json({ success: false, message: 'Test suite not found for problem' });
+    }
+
+    // Only run visible testcases (not edge cases)
+    const visibleTestcases = testSuite.cases.filter((tc: any) => !tc.isEdgeCase);
 
     const judge0Submissions = visibleTestcases.map((tc: any) => ({
       language_id: LANGUAGE_MAPPING[validatedData.language],

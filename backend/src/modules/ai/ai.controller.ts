@@ -52,11 +52,40 @@ export const generateSimilarProblem = async (req: AuthenticatedRequest, res: Res
     const slug = generatedProblemData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
     const newProblem = await Problem.create({
-      ...generatedProblemData,
+      title: generatedProblemData.title,
       slug,
+      difficulty: generatedProblemData.difficulty,
+      statementHtml: generatedProblemData.description,
+      examples: generatedProblemData.examples,
+      starterCodes: [
+        { language: 'cpp', version: '17', code: generatedProblemData.starterCode.CPP },
+        { language: 'java', version: '21', code: generatedProblemData.starterCode.JAVA },
+        { language: 'python', version: '3', code: generatedProblemData.starterCode.PYTHON }
+      ],
+      functionMetadata: { functionName: 'solve', returnType: 'void', parameters: '' },
       source: 'AI_GENERATED',
-      isPublished: true, // Immediately playable
-      createdBy: req.user?.id // Set creator to the user who requested it
+      status: 'PUBLISHED',
+      isPublished: true,
+      execution: { timeLimit: 2, memoryLimit: 256 },
+      battle: { enabled: true, weight: 50 },
+      contest: { visible: true },
+      versions: { problemVersion: 1, testSuiteVersion: 1 },
+      createdBy: req.user?.id 
+    });
+
+    const { ProblemTestSuite } = await import('../problems/problemTestSuite.model.js');
+    await ProblemTestSuite.create({
+      problemId: newProblem._id,
+      version: 1,
+      checkerType: 'STANDARD',
+      generatedAt: new Date(),
+      cases: generatedProblemData.testcases.map((tc: any) => ({
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        weight: 1,
+        isEdgeCase: tc.isHidden,
+        group: 'ai-generated'
+      }))
     });
 
     return res.status(201).json({ success: true, data: { problem: newProblem } });

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Problem } from './problem.model.js';
+import { ProblemTestSuite } from './problemTestSuite.model.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
 
@@ -54,7 +55,12 @@ export const createProblem = async (req: AuthenticatedRequest, res: Response, ne
 
 export const getProblems = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const problems = await Problem.find({ isPublished: true })
+    const problems = await Problem.find({
+      $or: [
+        { status: 'PUBLISHED' },
+        { isPublished: true }
+      ]
+    })
       .select('title slug difficulty tags')
       .sort({ createdAt: -1 });
     return res.status(200).json({ success: true, data: { problems } });
@@ -69,7 +75,20 @@ export const getProblemBySlug = async (req: Request, res: Response, next: NextFu
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
-    return res.status(200).json({ success: true, data: { problem } });
+
+    const problemObj = problem.toObject();
+    const testSuite = await ProblemTestSuite.findOne({ 
+      problemId: problemObj._id, 
+      version: problemObj.versions?.testSuiteVersion || 1 
+    });
+    
+    if (testSuite) {
+      (problemObj as any).testcases = testSuite.cases.filter((tc: any) => !tc.isEdgeCase);
+    } else {
+      (problemObj as any).testcases = [];
+    }
+
+    return res.status(200).json({ success: true, data: { problem: problemObj } });
   } catch (error) {
     next(error);
   }
