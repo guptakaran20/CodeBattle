@@ -28,22 +28,22 @@ export class TournamentRepository {
     return TournamentParticipant.findOne({ tournamentId, userId }).session(session || null);
   }
 
-  static async createParticipant(tournamentId: string, userId: string, session: ClientSession): Promise<ITournamentParticipant> {
+  static async createParticipant(tournamentId: string, userId: string, session?: ClientSession): Promise<ITournamentParticipant> {
     const participant = new TournamentParticipant({
       tournamentId,
       userId,
       status: 'REGISTERED'
     });
-    return participant.save({ session });
+    return participant.save(session ? { session } : {});
   }
 
-  static async incrementParticipantCount(tournamentId: string, session: ClientSession): Promise<ITournament | null> {
+  static async incrementParticipantCount(tournamentId: string, session?: ClientSession): Promise<ITournament | null> {
     // Uses optimistic concurrency via mongoose versionKey internally if configured, 
     // or just atomic $inc which is inherently safe within a transaction.
     return Tournament.findOneAndUpdate(
       { _id: tournamentId },
       { $inc: { currentParticipantsCount: 1 } },
-      { new: true, session }
+      session ? { new: true, session } : { new: true }
     );
   }
 

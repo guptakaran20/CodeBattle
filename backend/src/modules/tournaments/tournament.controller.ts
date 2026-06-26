@@ -6,6 +6,7 @@ import { TournamentRepository } from './tournament.repository.js';
 import { TournamentEngine } from './tournament.engine.js';
 import { TournamentService } from './tournament.service.js';
 import { NotificationService } from '../../services/notifications/NotificationService.js';
+import { TournamentStatus } from '../../constants/tournament.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 
 export const getTournaments = async (req: Request, res: Response, next: NextFunction) => {
@@ -23,7 +24,7 @@ export const getTournaments = async (req: Request, res: Response, next: NextFunc
 export const getTournament = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Identifier can be either slug or id
-    const identifier = req.params.slug || req.params.id;
+    const identifier = (req.params.slug || req.params.id) as string;
     const tournament = await TournamentService.getTournamentDetails(identifier);
     
     // For now we keep the populate logic in controller, but ideally move to repo
@@ -47,9 +48,9 @@ export const getTournament = async (req: Request, res: Response, next: NextFunct
 
 export const joinTournament = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const identifier = req.params.slug || req.params.id;
+    const identifier = (req.params.slug || req.params.id) as string;
     const result = await TournamentService.registerParticipant(identifier, req.user.id);
-    return res.status(200).json({ success: true, ...result });
+    return res.status(200).json(result);
   } catch (error: any) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -57,8 +58,8 @@ export const joinTournament = async (req: AuthenticatedRequest, res: Response, n
 
 export const checkInTournament = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tournament = await TournamentRepository.findBySlugOrId(req.params.id);
-    if (!tournament || tournament.status !== 'CHECK_IN') {
+    const tournament = await TournamentRepository.findBySlugOrId(req.params.id as string);
+    if (!tournament || tournament.status !== TournamentStatus.CHECK_IN) {
       return res.status(400).json({ success: false, message: 'Tournament is not open for check-in' });
     }
 
@@ -95,7 +96,7 @@ export const createTournament = async (req: AuthenticatedRequest, res: Response,
       maxParticipants,
       prizePool,
       startTime: startTime ? new Date(startTime) : undefined,
-      status: 'REGISTRATION', // Start directly in registration for MVP
+      status: TournamentStatus.REGISTRATION, // Start directly in registration for MVP
       createdBy: req.user.id
     });
     
@@ -108,7 +109,7 @@ export const createTournament = async (req: AuthenticatedRequest, res: Response,
 
 export const startTournament = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tournament = await TournamentRepository.findBySlugOrId(req.params.id);
+    const tournament = await TournamentRepository.findBySlugOrId(req.params.id as string);
     if (!tournament) return res.status(404).json({ success: false, message: 'Tournament not found' });
     
     await TournamentEngine.startTournament(req.params.id as string); 
@@ -132,14 +133,14 @@ export const startTournament = async (req: AuthenticatedRequest, res: Response, 
 
 export const openCheckIn = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tournament = await TournamentRepository.findBySlugOrId(req.params.id);
+    const tournament = await TournamentRepository.findBySlugOrId(req.params.id as string);
     if (!tournament) return res.status(404).json({ success: false, message: 'Tournament not found' });
     
     // Backfill for older tournaments created before these fields were required
     if (!tournament.shortId) tournament.shortId = 'TNMT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     if (!tournament.slug) tournament.slug = tournament.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + tournament.shortId.toLowerCase();
 
-    tournament.status = 'CHECK_IN';
+    tournament.status = TournamentStatus.CHECK_IN;
     await tournament.save();
     
     // Notify all participants
@@ -161,14 +162,14 @@ export const openCheckIn = async (req: AuthenticatedRequest, res: Response, next
 
 export const cancelTournament = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tournament = await TournamentRepository.findBySlugOrId(req.params.id);
+    const tournament = await TournamentRepository.findBySlugOrId(req.params.id as string);
     if (!tournament) return res.status(404).json({ success: false, message: 'Tournament not found' });
     
     // Backfill for older tournaments created before these fields were required
     if (!tournament.shortId) tournament.shortId = 'TNMT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     if (!tournament.slug) tournament.slug = tournament.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + tournament.shortId.toLowerCase();
 
-    tournament.status = 'CANCELLED';
+    tournament.status = TournamentStatus.CANCELLED;
     await tournament.save();
     
     // Notify all participants

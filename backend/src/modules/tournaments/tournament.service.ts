@@ -26,16 +26,16 @@ export class TournamentService {
     }
 
     // 3. Idempotency Check: Are they already registered?
-    const existing = await TournamentRepository.findParticipant(tournament.id, userId);
+    const existing = await TournamentRepository.findParticipant(tournament._id.toString(), userId);
     if (existing) {
       return { success: true, message: 'Already registered', participant: existing };
     }
 
     // 4. Create Participant
-    const participant = await TournamentRepository.createParticipant(tournament.id, userId);
+    const participant = await TournamentRepository.createParticipant(tournament._id.toString(), userId);
 
     // 5. Increment Participant Count
-    await TournamentRepository.incrementParticipantCount(tournament.id);
+    await TournamentRepository.incrementParticipantCount(tournament._id.toString());
 
     return { success: true, participant };
   }

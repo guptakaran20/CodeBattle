@@ -7,6 +7,7 @@ import { Problem } from '../problems/problem.model.js';
 import { getIO } from '../websockets/socket.service.js';
 import { nanoid } from 'nanoid';
 import { NotificationService } from '../../services/notifications/NotificationService.js';
+import { TournamentStatus } from '../../constants/tournament.js';
 
 export class TournamentEngine {
 
@@ -70,7 +71,7 @@ export class TournamentEngine {
     }
 
     // 3. Update Tournament State
-    tournament.status = 'IN_PROGRESS';
+    tournament.status = TournamentStatus.IN_PROGRESS;
     tournament.currentRound = 1;
     tournament.startTime = new Date();
     await tournament.save();
@@ -174,7 +175,7 @@ export class TournamentEngine {
       // No next match = This was the finals. Tournament over.
       const tournament = await Tournament.findById(match.tournamentId);
       if (tournament) {
-        tournament.status = 'COMPLETED';
+        tournament.status = TournamentStatus.COMPLETED;
         tournament.winner = advancedUserId as any;
         await tournament.save();
 

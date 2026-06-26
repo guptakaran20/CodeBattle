@@ -1,0 +1,1 @@
+{"version":3,"file":"matchmaking.engine.d.ts","sourceRoot":"","sources":["matchmaking.engine.ts"],"names":[],"mappings":"AAUA,qBAAa,iBAAiB;IAC5B,OAAO,CAAC,MAAM,CAAC,UAAU,CAA+B;IACxD,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAC,YAAY,CAAQ;IAC5C,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAC,YAAY,CAA4C;IAEhF,OAAO,CAAC,MAAM,CAAC,YAAY,CAAS;IAEpC,MAAM,CAAC,KAAK;IAUZ,MAAM,CAAC,IAAI;mBAQU,aAAa;mBAWb,YAAY;CAoMlC"}
