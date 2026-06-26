@@ -9,7 +9,7 @@ export const BuiltFor = () => {
   ];
 
   return (
-    <section className="py-8 border-y border-surface-variant bg-surface-container-lowest/50 w-full overflow-hidden flex flex-col items-center justify-center gap-6">
+    <section className="py-8   bg-surface-container-lowest/50 w-full overflow-hidden flex flex-col items-center justify-center gap-6">
       <h3 className="font-label-caps text-xs sm:text-sm uppercase tracking-[0.2em] text-on-surface-variant font-bold text-center">
         Built For
       </h3>

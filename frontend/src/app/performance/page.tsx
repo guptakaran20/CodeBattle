@@ -107,17 +107,28 @@ export default function PerformancePage() {
   }, [isAuthenticated]);
 
   const isSkeleton = authLoading || loading || !isAuthenticated;
-  
-  if (!isAuthenticated && !authLoading) {
-    return (
-      <div className="min-h-screen pt-24 px-4 flex justify-center items-center font-body-md">
-         You must be logged in to view your performance.
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-[1000px] mx-auto p-4 md:p-8 pt-24 space-y-8 animate-in fade-in duration-500 font-body-md text-on-surface">
+    <>
+      {/* Auth Overlay */}
+      {!authLoading && !isAuthenticated && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-surface-variant p-10 rounded-xl flex flex-col items-center justify-center shadow-2xl text-center w-full max-w-[420px] h-auto m-auto">
+            <div className="w-16 h-16 shrink-0 rounded-full bg-surface-variant flex items-center justify-center mb-4">
+               <span className="material-symbols-outlined text-[32px] text-primary">lock</span>
+            </div>
+            <h2 className="text-2xl font-bold font-headline-lg mb-2">Sign In to Continue</h2>
+            <p className="text-on-surface-variant text-sm mb-8 w-full" style={{ wordBreak: 'normal', whiteSpace: 'normal' }}>
+              You must log in to view your detailed performance telemetry.
+            </p>
+            <Link href="/login" className="w-full py-3 bg-primary text-on-primary rounded font-label-caps text-xs uppercase tracking-widest hover:opacity-90 transition-opacity pointer-events-auto font-bold">
+               Log In To Access
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-[1000px] mx-auto p-4 md:p-8 pt-24 space-y-8 animate-in fade-in duration-500 font-body-md text-on-surface">
       <div className="flex items-center justify-between border-b border-surface-variant pb-6 mb-6">
         <div>
           <h1 className="font-headline-lg text-[32px] md:text-[40px] font-bold tracking-tight text-on-surface">Performance</h1>
@@ -247,5 +258,6 @@ export default function PerformancePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

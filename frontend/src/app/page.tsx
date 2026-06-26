@@ -40,8 +40,6 @@ export default function Home() {
 
         <div className="flex flex-col gap-[60px] px-margin-page max-w-7xl mx-auto w-full pb-xl pt-[60px]">
 
-        {/* 5. Features */}
-        <Features />
 
         {/* 6. Level Up Features Grid */}
         <LevelUpFeatures />

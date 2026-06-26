@@ -35,14 +35,14 @@ export const TopNav = () => {
   const hasSidebar = sidebarRoutes.some(route => pathname?.startsWith(route));
 
   const navItemClass = (path: string) => `
-    font-label-caps text-label-caps hover:text-primary transition-colors duration-150 uppercase tracking-widest
+    font-label-caps text-xs hover:text-primary transition-colors duration-150 uppercase tracking-widest font-semibold cursor-pointer
     ${isActive(path) 
-      ? 'text-primary border-b-2 border-primary pb-1 scale-95 transition-transform' 
+      ? 'text-primary' 
       : 'text-on-surface-variant'}
   `;
 
   return (
-    <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-margin-page h-16 bg-surface dark:bg-surface border-b border-surface-variant dark:border-surface-variant">
+    <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-margin-page h-16 bg-background/80 backdrop-blur-md border-b border-surface-variant">
       <div className="flex items-center gap-4">
         {(isAuthenticated && hasSidebar) && (
           <button 
@@ -52,16 +52,17 @@ export const TopNav = () => {
             <span className="material-symbols-outlined">{isSidebarVisible ? 'menu_open' : 'menu'}</span>
           </button>
         )}
-        <Link href="/" className="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary">
+        <Link href="/" className="font-headline-lg text-xl font-bold text-primary flex items-center gap-2">
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>code_blocks</span>
           CodeArena
         </Link>
-        <div className="hidden md:flex gap-lg ml-xl">
-          <Link href="/dashboard" className={navItemClass('/dashboard')}>
-            Dashboard
-          </Link>
-          <Link href="/arena" className={navItemClass('/arena')}>
-            Arena
-          </Link>
+        <div className="hidden md:flex gap-8 ml-12">
+              <Link href="/dashboard" className={navItemClass('/dashboard')}>
+                Dashboard
+              </Link>
+              <Link href="/arena" className={navItemClass('/arena')}>
+                Arena
+              </Link>
           <Link href="/leaderboard" className={navItemClass('/leaderboard')}>
             Leaderboard
           </Link>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 interface Tournament {
   _id: string;
@@ -16,6 +17,7 @@ interface Tournament {
 }
 
 export default function TournamentsPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,8 +102,27 @@ export default function TournamentsPage() {
   ];
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 md:px-8 max-w-[1280px] mx-auto">
-      <div className="text-center mb-12 relative">
+    <>
+      {/* Auth Overlay */}
+      {!authLoading && !isAuthenticated && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-surface-variant p-10 rounded-xl flex flex-col items-center justify-center shadow-2xl text-center w-full max-w-[420px] h-auto m-auto">
+            <div className="w-16 h-16 shrink-0 rounded-full bg-surface-variant flex items-center justify-center mb-4">
+               <span className="material-symbols-outlined text-[32px] text-primary">lock</span>
+            </div>
+            <h2 className="text-2xl font-bold font-headline-lg mb-2">Sign In to Continue</h2>
+            <p className="text-on-surface-variant text-sm mb-8 w-full" style={{ wordBreak: 'normal', whiteSpace: 'normal' }}>
+              You must log in to view and register for tournaments.
+            </p>
+            <Link href="/login" className="w-full py-3 bg-primary text-on-primary rounded font-label-caps text-xs uppercase tracking-widest hover:opacity-90 transition-opacity pointer-events-auto font-bold">
+               Log In To Access
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen pt-24 pb-12 px-4 md:px-8 max-w-[1280px] mx-auto">
+        <div className="text-center mb-12 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/20 blur-[100px] pointer-events-none rounded-full"></div>
         <h1 className="font-headline text-4xl md:text-5xl font-bold text-on-surface mb-4 tracking-tight relative z-10">Tournaments</h1>
         <p className="text-on-surface-variant max-w-2xl mx-auto font-body-md relative z-10">Compete in massive multi-stage brackets. Win exclusive titles, huge Elo boosts, and ultimate bragging rights.</p>
@@ -156,5 +177,6 @@ export default function TournamentsPage() {
         ))}
       </div>
     </div>
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Footer } from '@/components/layout/Footer';
 
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -338,15 +339,7 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="pt-12 pb-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-surface-variant mt-12 text-xs font-label-caps tracking-widest text-on-surface-variant uppercase">
-        <div>© 2024 CodeArena Infrastructure. All systems operational.</div>
-        <div className="flex gap-6">
-          <Link href="#" className="hover:text-primary transition-colors">Terms</Link>
-          <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
-          <Link href="#" className="hover:text-primary transition-colors">API Docs</Link>
-          <Link href="#" className="hover:text-primary transition-colors">Status</Link>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
     </>

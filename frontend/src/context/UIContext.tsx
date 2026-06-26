@@ -15,6 +15,12 @@ const UIContext = createContext<UIContextType>({
 export const UIProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarVisible, setSidebarVisible] = useState(true);
 
+  React.useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarVisible(false);
+    }
+  }, []);
+
   return (
     <UIContext.Provider value={{ isSidebarVisible, setSidebarVisible }}>
       {children}

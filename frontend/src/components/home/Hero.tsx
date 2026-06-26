@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BattlePreview } from './BattlePreview';
+import { useAuth } from '@/context/AuthContext';
 
 const activityFeed = [
   { icon: 'local_fire_department', text: 'DevAlpha defeated CodeMaster', color: 'text-orange-500' },
@@ -13,6 +14,7 @@ const activityFeed = [
 ];
 
 export const Hero = () => {
+  const { isAuthenticated } = useAuth();
   const [currentActivity, setCurrentActivity] = useState(0);
 
   useEffect(() => {
@@ -59,12 +61,12 @@ export const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-12 w-full sm:w-auto">
-            <Link href="/register" className="w-full sm:w-auto bg-primary text-on-primary px-8 py-3.5 rounded-xl font-label-caps uppercase tracking-widest text-sm font-bold hover:bg-primary-fixed hover:scale-105 transition-all shadow-[0_4px_20px_rgba(255,193,116,0.2)] text-center">
+            <Link href={isAuthenticated ? "/dashboard" : "/register"} className="w-full sm:w-auto bg-primary text-on-primary px-8 py-3.5 rounded-xl font-label-caps uppercase tracking-widest text-sm font-bold hover:bg-primary-fixed hover:scale-105 transition-all shadow-[0_4px_20px_rgba(255,193,116,0.2)] text-center">
               Start Battling Now
             </Link>
-            <Link href="#live-battles" className="w-full sm:w-auto bg-surface border border-surface-variant text-on-surface px-8 py-3.5 rounded-xl font-label-caps uppercase tracking-widest text-sm font-semibold hover:bg-surface-variant transition-colors text-center flex items-center justify-center gap-2">
+            <Link href="/arena" className="w-full sm:w-auto bg-surface border border-surface-variant text-on-surface px-8 py-3.5 rounded-xl font-label-caps uppercase tracking-widest text-sm font-semibold hover:bg-surface-variant transition-colors text-center flex items-center justify-center gap-2">
               <span className="material-symbols-outlined text-[18px]">play_circle</span>
-              View Live Arena
+              View Arena
             </Link>
           </div>
 

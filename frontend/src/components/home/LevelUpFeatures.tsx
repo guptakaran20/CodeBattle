@@ -53,7 +53,7 @@ export const LevelUpFeatures = () => {
   ];
 
   return (
-    <section className="flex flex-col gap-12 py-12">
+    <section id="features" className="flex flex-col gap-12 py-12">
       <div className="flex flex-col items-center text-center gap-4">
         <h2 className="font-headline-lg text-3xl md:text-4xl font-bold text-on-surface">
           Everything you need to <span className="text-emerald-400">level up</span>

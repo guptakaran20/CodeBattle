@@ -34,7 +34,7 @@ export const Sidebar = () => {
   }
 
   return (
-    <aside className="hidden md:flex flex-col justify-between fixed left-0 top-16 h-[calc(100vh-64px)] w-[280px] bg-surface-container-low dark:bg-surface-container-low border-r border-surface-variant dark:border-surface-variant py-md z-40">
+    <aside className="flex flex-col justify-between fixed left-0 top-16 h-[calc(100vh-64px)] w-[280px] bg-surface-container-low dark:bg-surface-container-low border-r border-surface-variant dark:border-surface-variant py-md z-40 shadow-xl md:shadow-none bg-background/95 backdrop-blur-md md:bg-surface-container-low">
       <div>
         <div className="px-lg pb-lg mb-sm border-b border-surface-variant">
           <div className="flex items-center gap-sm">

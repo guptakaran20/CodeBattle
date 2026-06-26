@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export const LandingNavbar = () => {
+  const { user, isAuthenticated } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -48,12 +50,20 @@ export const LandingNavbar = () => {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Link href="/login" className="text-on-surface hover:text-primary font-label-caps uppercase tracking-widest text-xs font-semibold transition-colors">
-          Log in
-        </Link>
-        <Link href="/register" className="bg-primary text-on-primary px-5 py-2 rounded-xl font-label-caps uppercase tracking-widest text-xs font-bold hover:bg-primary-fixed hover:scale-105 transition-all shadow-[0_4px_14px_rgba(255,193,116,0.15)]">
-          Get Started
-        </Link>
+        {isAuthenticated ? (
+          <Link href="/dashboard" className="w-8 h-8 rounded bg-surface-variant border border-surface-variant flex items-center justify-center font-bold text-primary hover:opacity-80 transition-opacity" title="Dashboard">
+            {user?.username ? user.username.charAt(0).toUpperCase() : <span className="material-symbols-outlined text-[18px]">person</span>}
+          </Link>
+        ) : (
+          <>
+            <Link href="/login" className="text-on-surface hover:text-primary font-label-caps uppercase tracking-widest text-xs font-semibold transition-colors">
+              Log in
+            </Link>
+            <Link href="/register" className="bg-primary text-on-primary px-5 py-2 rounded-xl font-label-caps uppercase tracking-widest text-xs font-bold hover:bg-primary-fixed hover:scale-105 transition-all shadow-[0_4px_14px_rgba(255,193,116,0.15)]">
+              Get Started
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );

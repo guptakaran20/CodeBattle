@@ -1,7 +1,11 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export const CTA = () => {
+  const { isAuthenticated } = useAuth();
   return (
     <section className="w-full py-0">
       <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#0a0a0c] border border-surface-variant flex flex-col items-center justify-center text-center px-6 py-24 md:py-32 group shadow-2xl">
@@ -36,7 +40,7 @@ export const CTA = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 w-full justify-center">
-            <Link href="/register" className="w-full sm:w-auto bg-primary hover:bg-primary-fixed text-on-primary font-label-caps text-base uppercase tracking-widest px-10 py-5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-bold shadow-[0_0_30px_rgba(255,193,116,0.2)] hover:shadow-[0_0_40px_rgba(255,193,116,0.4)] hover:-translate-y-1">
+            <Link href={isAuthenticated ? "/dashboard" : "/register"} className="w-full sm:w-auto bg-primary hover:bg-primary-fixed text-on-primary font-label-caps text-base uppercase tracking-widest px-10 py-5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-bold shadow-[0_0_30px_rgba(255,193,116,0.2)] hover:shadow-[0_0_40px_rgba(255,193,116,0.4)] hover:-translate-y-1">
               Start Battling Now <span className="material-symbols-outlined text-[20px]">swords</span>
             </Link>
           </div>

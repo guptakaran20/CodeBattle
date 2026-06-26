@@ -7,13 +7,21 @@ import { LandingNavbar } from './LandingNavbar';
 import { Sidebar } from './Sidebar';
 
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { isSidebarVisible } = useUI();
+  const { isSidebarVisible, setSidebarVisible } = useUI();
   const pathname = usePathname();
 
-  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/profile'];
-  const showSidebar = isSidebarVisible && sidebarRoutes.some(route => pathname?.startsWith(route));
+  React.useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarVisible(false);
+    }
+  }, [pathname, setSidebarVisible]);
+
+  const sidebarRoutes = ['/dashboard', '/arena', '/history', '/leaderboard', '/performance', '/tournaments', '/profile'];
+  const { isAuthenticated } = useAuth();
+  const showSidebar = isAuthenticated && isSidebarVisible && sidebarRoutes.some(route => pathname?.startsWith(route));
   const showNavbar = pathname !== '/login' && pathname !== '/register' && pathname !== '/forgot-password' && !pathname?.startsWith('/battle');
   
   const isLandingPage = pathname === '/';
