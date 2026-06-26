@@ -17,11 +17,12 @@ ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 backenduser
-USER backenduser
 
 COPY package.json package-lock.json* ./
 # Only install production dependencies
 RUN npm install --omit=dev
+
+USER backenduser
 
 COPY --from=builder /app/dist ./dist
 
