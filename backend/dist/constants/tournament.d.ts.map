@@ -1,0 +1,1 @@
+{"version":3,"file":"tournament.d.ts","sourceRoot":"","sources":["../../src/constants/tournament.ts"],"names":[],"mappings":"AAAA,oBAAY,gBAAgB;IAC1B,KAAK,UAAU;IACf,YAAY,iBAAiB;IAC7B,QAAQ,aAAa;IACrB,WAAW,gBAAgB;IAC3B,SAAS,cAAc;IACvB,SAAS,cAAc;CACxB;AAED,oBAAY,oBAAoB;IAC9B,IAAI,SAAS;IACb,MAAM,WAAW;IACjB,IAAI,SAAS;IACb,KAAK,UAAU;CAChB"}
