@@ -3,13 +3,10 @@
 import Link from 'next/link';
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
-import { LiveBattles } from '@/components/home/LiveBattles';
 import { BuiltFor } from '@/components/home/BuiltFor';
-import { Features } from '@/components/home/Features';
 import { LevelUpFeatures } from '@/components/home/LevelUpFeatures';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { LeaderboardPreview } from '@/components/home/LeaderboardPreview';
-import { TournamentPreview } from '@/components/home/TournamentPreview';
 import { AISection } from '@/components/home/AISection';
 import { CTA } from '@/components/home/CTA';
 import { Footer } from '@/components/layout/Footer';

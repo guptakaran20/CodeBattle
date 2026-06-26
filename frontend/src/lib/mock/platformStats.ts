@@ -6,8 +6,8 @@ export interface PlatformStats {
 }
 
 export const platformStats: PlatformStats = {
-  playersOnline: 1247,
-  battlesToday: 8492,
-  problemsSolved: 2405000,
-  topRating: 3420,
+  playersOnline: 2,
+  battlesToday: 3,
+  problemsSolved: 1,
+  topRating: 1000,
 };
