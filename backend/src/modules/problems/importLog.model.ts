@@ -11,7 +11,7 @@ export interface IImportLog extends Document {
   
   validationStatus: 'PASSED' | 'FAILED' | 'MANUAL_REVIEW';
   validationTime: number; // in milliseconds
-  errors: string[];
+  importErrors: string[];
   
   rawSource: mongoose.Schema.Types.Mixed; // The full API JSON response
   aiLogs: mongoose.Schema.Types.Mixed; // Any AI generation metadata
@@ -30,7 +30,7 @@ const importLogSchema = new Schema<IImportLog>(
     
     validationStatus: { type: String, enum: ['PASSED', 'FAILED', 'MANUAL_REVIEW'], required: true },
     validationTime: { type: Number, default: 0 },
-    errors: [{ type: String }],
+    importErrors: [{ type: String }],
     
     rawSource: { type: Schema.Types.Mixed },
     aiLogs: { type: Schema.Types.Mixed },

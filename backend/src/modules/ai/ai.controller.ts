@@ -58,20 +58,18 @@ export const generateSimilarProblem = async (req: AuthenticatedRequest, res: Res
       statementHtml: generatedProblemData.description,
       examples: generatedProblemData.examples,
       starterCodes: [
-        { language: 'cpp', version: '17', code: generatedProblemData.starterCode.CPP },
-        { language: 'java', version: '21', code: generatedProblemData.starterCode.JAVA },
-        { language: 'python', version: '3', code: generatedProblemData.starterCode.PYTHON }
+        { language: 'cpp', version: '17', code: generatedProblemData.starterCode?.CPP || '' },
+        { language: 'java', version: '21', code: generatedProblemData.starterCode?.JAVA || '' },
+        { language: 'python', version: '3', code: generatedProblemData.starterCode?.PYTHON || '' }
       ],
       functionMetadata: { functionName: 'solve', returnType: 'void', parameters: '' },
-      source: 'AI_GENERATED',
       status: 'PUBLISHED',
-      isPublished: true,
       execution: { timeLimit: 2, memoryLimit: 256 },
       battle: { enabled: true, weight: 50 },
       contest: { visible: true },
       versions: { problemVersion: 1, testSuiteVersion: 1 },
       createdBy: req.user?.id 
-    });
+    }) as any;
 
     const { ProblemTestSuite } = await import('../problems/problemTestSuite.model.js');
     await ProblemTestSuite.create({

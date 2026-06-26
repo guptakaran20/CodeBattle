@@ -40,7 +40,7 @@ export class ImportValidator {
       const hiddenCases = [];
       
       for (let i = 0; i < inputs.length; i++) {
-        const input = inputs[i];
+        const input = inputs[i] || '';
         
         // Write input to a temp file or pass via stdin
         const inputFile = path.join(tempDir, `input_${i}.txt`);

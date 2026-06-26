@@ -1,29 +1,46 @@
 import mongoose, { Document, Types } from 'mongoose';
 export interface IProblem extends Document {
+    leetcodeId?: string;
     title: string;
     slug: string;
-    description: string;
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    tags: string[];
-    constraints: string[];
+    statementHtml: string;
     examples: {
         input: string;
         output: string;
         explanation?: string;
     }[];
-    starterCode: {
-        CPP?: string;
-        JAVA?: string;
-        PYTHON?: string;
-    };
-    testcases: {
-        input: string;
-        expectedOutput: string;
-        isHidden: boolean;
+    constraints: string[];
+    tags: string[];
+    companies: string[];
+    starterCodes: {
+        language: string;
+        version: string;
+        code: string;
     }[];
-    source: 'ORIGINAL' | 'AI_GENERATED';
-    isPublished: boolean;
-    createdBy: Types.ObjectId;
+    functionMetadata?: {
+        functionName: string;
+        returnType: string;
+        parameters: string;
+        className?: string;
+    };
+    execution: {
+        timeLimit: number;
+        memoryLimit: number;
+    };
+    battle: {
+        enabled: boolean;
+        weight: number;
+    };
+    contest: {
+        visible: boolean;
+    };
+    versions: {
+        problemVersion: number;
+        testSuiteVersion: number;
+    };
+    status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    createdBy?: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }

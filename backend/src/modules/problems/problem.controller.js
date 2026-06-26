@@ -1,4 +1,5 @@
 import { Problem } from './problem.model.js';
+import { ProblemTestSuite } from './problemTestSuite.model.js';
 import { z } from 'zod';
 const createProblemSchema = z.object({
     title: z.string().min(3),
@@ -47,7 +48,12 @@ export const createProblem = async (req, res, next) => {
 };
 export const getProblems = async (req, res, next) => {
     try {
-        const problems = await Problem.find({ isPublished: true })
+        const problems = await Problem.find({
+            $or: [
+                { status: 'PUBLISHED' },
+                { isPublished: true }
+            ]
+        })
             .select('title slug difficulty tags')
             .sort({ createdAt: -1 });
         return res.status(200).json({ success: true, data: { problems } });
@@ -62,7 +68,18 @@ export const getProblemBySlug = async (req, res, next) => {
         if (!problem) {
             return res.status(404).json({ success: false, message: 'Problem not found' });
         }
-        return res.status(200).json({ success: true, data: { problem } });
+        const problemObj = problem.toObject();
+        const testSuite = await ProblemTestSuite.findOne({
+            problemId: problemObj._id,
+            version: problemObj.versions?.testSuiteVersion || 1
+        });
+        if (testSuite) {
+            problemObj.testcases = testSuite.cases.filter((tc) => !tc.isEdgeCase);
+        }
+        else {
+            problemObj.testcases = [];
+        }
+        return res.status(200).json({ success: true, data: { problem: problemObj } });
     }
     catch (error) {
         next(error);

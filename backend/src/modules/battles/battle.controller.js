@@ -2,6 +2,7 @@ import { Battle } from './battle.model.js';
 import { User } from '../users/user.model.js';
 import { ReplayService } from '../replays/replay.service.js';
 import { Problem } from '../problems/problem.model.js';
+import { ProblemTestSuite } from '../problems/problemTestSuite.model.js';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { BattleGatewayService } from '../websockets/battle.gateway.js';
@@ -116,10 +117,20 @@ export const getBattle = async (req, res, next) => {
                 }
             }
         }
-        // Filter out hidden testcases
+        // Inject visible testcases from ProblemTestSuite
         const battleObj = battle.toObject();
-        if (battleObj.problem && battleObj.problem.testcases) {
-            battleObj.problem.testcases = battleObj.problem.testcases.filter((tc) => !tc.isHidden);
+        if (battleObj.problem) {
+            const problemDoc = battle.problem;
+            const testSuite = await ProblemTestSuite.findOne({
+                problemId: problemDoc._id,
+                version: problemDoc.versions?.testSuiteVersion || 1
+            });
+            if (testSuite) {
+                battleObj.problem.testcases = testSuite.cases.filter((tc) => !tc.isEdgeCase);
+            }
+            else {
+                battleObj.problem.testcases = [];
+            }
         }
         return res.status(200).json({ success: true, data: { battle: battleObj } });
     }

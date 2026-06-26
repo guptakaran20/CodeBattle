@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - codearena-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - codearena-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+networks:
+  codearena-network:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:

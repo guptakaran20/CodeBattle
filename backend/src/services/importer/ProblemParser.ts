@@ -75,7 +75,7 @@ export class ProblemParser {
   private extractConstraints(html: string): string[] {
     // Rough extraction from HTML
     const constraintsMatch = html?.match(/<ul>(.*?)<\/ul>/is);
-    if (constraintsMatch) {
+    if (constraintsMatch && constraintsMatch[1]) {
       const items = constraintsMatch[1].match(/<li>(.*?)<\/li>/gi);
       if (items) {
         return items.map(item => item.replace(/<\/?li>/g, '').replace(/<[^>]+>/g, '').trim());

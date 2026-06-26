@@ -1,6 +1,7 @@
 import { Submission } from './submission.model.js';
 import { Battle } from '../battles/battle.model.js';
 import { Problem } from '../problems/problem.model.js';
+import { ProblemTestSuite } from '../problems/problemTestSuite.model.js';
 import { ReplayService } from '../replays/replay.service.js';
 import { z } from 'zod';
 import { SubmissionProcessorFactory } from './processors/factory.js';
@@ -80,8 +81,12 @@ export const runSubmission = async (req, res, next) => {
         if (!problem) {
             return res.status(404).json({ success: false, message: 'Problem not found' });
         }
-        // Only run visible testcases
-        const visibleTestcases = problem.testcases.filter((tc) => !tc.isHidden);
+        const testSuite = await ProblemTestSuite.findOne({ problemId: problem._id, version: problem.versions.testSuiteVersion });
+        if (!testSuite) {
+            return res.status(500).json({ success: false, message: 'Test suite not found for problem' });
+        }
+        // Only run visible testcases (not edge cases)
+        const visibleTestcases = testSuite.cases.filter((tc) => !tc.isEdgeCase);
         const judge0Submissions = visibleTestcases.map((tc) => ({
             language_id: LANGUAGE_MAPPING[validatedData.language],
             source_code: validatedData.code,

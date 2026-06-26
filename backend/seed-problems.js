@@ -16,19 +16,23 @@ async function seed() {
             await Problem.create({
                 title: `Sample ${diff} Problem`,
                 slug: `sample-${diff.toLowerCase()}-problem-${Date.now()}`,
-                description: `This is an auto-generated sample problem to make matchmaking work for ${diff} difficulty.`,
+                statementHtml: `This is an auto-generated sample problem to make matchmaking work for ${diff} difficulty.`,
                 difficulty: diff,
                 tags: ['sample', diff.toLowerCase()],
+                companies: [],
                 constraints: ['1 <= n <= 1000'],
                 examples: [{ input: 'x = 1', output: 'true', explanation: 'Sample' }],
-                starterCode: {
-                    CPP: 'class Solution {\npublic:\n    bool solve() {\n        return true;\n    }\n};',
-                    JAVA: 'class Solution {\n    public boolean solve() {\n        return true;\n    }\n}',
-                    PYTHON: 'class Solution:\n    def solve(self):\n        return True\n'
-                },
-                testcases: [{ input: '1', expectedOutput: 'true', isHidden: false }],
-                source: 'AI_GENERATED',
-                isPublished: true,
+                starterCodes: [
+                    { language: 'cpp', version: '17', code: 'class Solution {\npublic:\n    bool solve() {\n        return true;\n    }\n};' },
+                    { language: 'java', version: '17', code: 'class Solution {\n    public boolean solve() {\n        return true;\n    }\n}' },
+                    { language: 'python', version: '3', code: 'class Solution:\n    def solve(self):\n        return True\n' }
+                ],
+                functionMetadata: { functionName: 'solve', returnType: 'boolean', parameters: '' },
+                execution: { timeLimit: 2, memoryLimit: 256 },
+                battle: { enabled: true, weight: 50 },
+                contest: { visible: true },
+                versions: { problemVersion: 1, testSuiteVersion: 1 },
+                status: 'PUBLISHED',
                 createdBy: adminUser._id
             });
             console.log(`Created ${diff} problem.`);

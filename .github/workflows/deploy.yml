@@ -1,0 +1,50 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install Dependencies
+      run: |
+        cd backend && npm ci
+        cd ../frontend && npm ci
+        
+    - name: Run Linter
+      run: |
+        cd frontend && npm run lint
+        
+    - name: Build Projects
+      run: |
+        cd backend && npm run build
+        cd ../frontend && npm run build
+
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build Backend Image
+      run: docker build -t codearena-backend:latest ./backend
+      
+    - name: Build Frontend Image
+      run: docker build -t codearena-frontend:latest ./frontend
+      
+    - name: Push to Registry (Placeholder)
+      run: echo "Push step goes here"

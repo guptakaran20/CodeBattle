@@ -127,7 +127,7 @@ export class ProblemImporterService {
       validationTime: validation.executionTimeMs,
       rawSource: parsed.rawSource,
       aiLogs: drafted.aiLogs,
-      errors: [],
+      importErrors: [],
     });
 
     return true;
@@ -140,7 +140,7 @@ export class ProblemImporterService {
       validationTime,
       rawSource,
       aiLogs,
-      errors,
+      importErrors: errors,
     });
   }
 }

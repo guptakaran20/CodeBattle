@@ -65,14 +65,14 @@ async function run() {
     const existing = await Problem.findOne({ slug: data.slug });
     if (!existing) {
       const p = await Problem.create({
-        ...data,
+        ...(data as any),
         execution: { timeLimit: 2, memoryLimit: 256 },
         battle: { enabled: true, weight: 50 },
         contest: { visible: true },
         versions: { problemVersion: 1, testSuiteVersion: 1 },
         status: 'PUBLISHED',
         createdBy: adminUser?._id
-      });
+      }) as any;
       
       await ProblemTestSuite.create({
         problemId: p._id,
