@@ -4,102 +4,77 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-
-interface Tournament {
-  _id: string;
-  name: string;
-  description: string;
-  startTime: string;
-  maxParticipants: number;
-  status: 'REGISTRATION' | 'CHECK_IN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  currentParticipantsCount: number;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'MIXED';
-}
+import { Tournament, TournamentStatus, TournamentDifficulty } from '@/types/tournament';
+import { TournamentCard } from '@/components/tournaments/TournamentCard';
 
 export default function TournamentsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const res = await api.get('/tournaments');
-        if (res.data.success) {
-          setTournaments(res.data.data.tournaments);
-        }
-      } catch (error) {
-        console.error('Failed to load tournaments', error);
-      } finally {
-        setLoading(false);
+  const fetchTournaments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get('/tournaments');
+      if (res.data.success) {
+        setTournaments(res.data.data.tournaments);
       }
-    };
-    fetchTournaments();
-  }, []);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'REGISTRATION':
-        return <span className="bg-primary/10 border border-primary/30 text-primary px-3 py-1 rounded text-xs font-label-caps uppercase tracking-widest font-bold">Open</span>;
-      case 'CHECK_IN':
-        return <span className="bg-amber-500/10 border border-amber-500/30 text-amber-500 px-3 py-1 rounded text-xs font-label-caps uppercase tracking-widest font-bold">Check-In</span>;
-      case 'IN_PROGRESS':
-        return <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1 rounded text-xs font-label-caps uppercase tracking-widest font-bold">Live</span>;
-      case 'COMPLETED':
-        return <span className="bg-surface-variant/50 border border-surface-variant text-on-surface-variant px-3 py-1 rounded text-xs font-label-caps uppercase tracking-widest font-bold">Completed</span>;
-      default:
-        return <span className="bg-error/10 border border-error/30 text-error px-3 py-1 rounded text-xs font-label-caps uppercase tracking-widest font-bold">Cancelled</span>;
+    } catch (err) {
+      console.error('Failed to load tournaments', err);
+      setError('Failed to load tournaments. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getDifficultyColor = (diff: string) => {
-    if (diff === 'EASY') return 'text-emerald-400';
-    if (diff === 'MEDIUM') return 'text-primary';
-    if (diff === 'HARD') return 'text-error';
-    return 'text-on-surface-variant';
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen pt-24 px-4 flex justify-center items-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
 
   // Mock tournaments if none exist from the API, to keep the visual aesthetic alive
   const displayTournaments = tournaments.length > 0 ? tournaments : [
     {
       _id: 't_mock_1',
-      name: 'Global CodeFest 2026',
+      title: 'Global CodeFest 2026',
+      slug: 'global-codefest-2026',
+      shortId: 'TC-1',
       description: 'The ultimate battle of algorithmic supremacy. 128 players enter, one leaves as Champion.',
       startTime: new Date(Date.now() + 86400000).toISOString(),
       maxParticipants: 128,
-      status: 'REGISTRATION',
+      status: TournamentStatus.REGISTRATION,
       currentParticipantsCount: 42,
-      difficulty: 'HARD'
+      difficulty: TournamentDifficulty.HARD,
+      isRegistered: false,
     },
     {
       _id: 't_mock_2',
-      name: 'Weekly Blitz Arena',
+      title: 'Weekly Blitz Arena',
+      slug: 'weekly-blitz-arena',
+      shortId: 'TC-2',
       description: 'Fast-paced algorithmic challenges. Quick thinking is the only way to survive.',
       startTime: new Date(Date.now() - 3600000).toISOString(),
       maxParticipants: 32,
-      status: 'IN_PROGRESS',
+      status: TournamentStatus.IN_PROGRESS,
       currentParticipantsCount: 32,
-      difficulty: 'MEDIUM'
+      difficulty: TournamentDifficulty.MEDIUM,
+      isRegistered: true,
     },
     {
       _id: 't_mock_3',
-      name: 'Rookie Circuit',
+      title: 'Rookie Circuit',
+      slug: 'rookie-circuit',
+      shortId: 'TC-3',
       description: 'A beginner friendly tournament to get your feet wet in competitive coding.',
       startTime: new Date(Date.now() - 86400000 * 2).toISOString(),
       maxParticipants: 64,
-      status: 'COMPLETED',
+      status: TournamentStatus.COMPLETED,
       currentParticipantsCount: 64,
-      difficulty: 'EASY'
+      difficulty: TournamentDifficulty.EASY,
+      isRegistered: false,
     }
-  ];
+  ] as Tournament[];
 
   return (
     <>
@@ -123,60 +98,50 @@ export default function TournamentsPage() {
 
       <div className="min-h-screen pt-24 pb-12 px-4 md:px-8 max-w-[1280px] mx-auto">
         <div className="text-center mb-12 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/20 blur-[100px] pointer-events-none rounded-full"></div>
-        <h1 className="font-headline text-4xl md:text-5xl font-bold text-on-surface mb-4 tracking-tight relative z-10">Tournaments</h1>
-        <p className="text-on-surface-variant max-w-2xl mx-auto font-body-md relative z-10">Compete in massive multi-stage brackets. Win exclusive titles, huge Elo boosts, and ultimate bragging rights.</p>
-      </div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/20 blur-[100px] pointer-events-none rounded-full"></div>
+          <h1 className="font-headline text-4xl md:text-5xl font-bold text-on-surface mb-4 tracking-tight relative z-10">Tournaments</h1>
+          <p className="text-on-surface-variant max-w-2xl mx-auto font-body-md relative z-10">Compete in massive multi-stage brackets. Win exclusive titles, huge Elo boosts, and ultimate bragging rights.</p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {displayTournaments.map((t: any) => (
-          <div key={t._id} className="bg-surface-container border border-surface-variant rounded-xl p-6 flex flex-col hover:border-surface-bright hover:shadow-[0_4px_20px_rgba(255,193,116,0.05)] transition-all group relative overflow-hidden">
-             
-             {/* Glow background for Live tournaments */}
-             {t.status === 'IN_PROGRESS' && (
-               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] pointer-events-none rounded-full"></div>
-             )}
-
-             <div className="flex justify-between items-start mb-4 relative z-10">
-               {getStatusBadge(t.status)}
-               <span className={`font-label-caps text-xs tracking-widest uppercase font-bold ${getDifficultyColor(t.difficulty)}`}>{t.difficulty || 'MIXED'}</span>
-             </div>
-             
-             <h2 className="font-headline-lg text-2xl font-bold text-on-surface mb-2 relative z-10 group-hover:text-primary transition-colors">{t.name}</h2>
-             <p className="text-on-surface-variant text-sm mb-6 flex-1 relative z-10">{t.description}</p>
-             
-             <div className="space-y-3 mb-6 relative z-10">
-               <div className="flex justify-between items-center bg-surface-container-low p-3 rounded border border-surface-variant">
-                 <span className="font-code-sm text-xs text-on-surface-variant uppercase">Starts</span>
-                 <span className="font-code-sm text-sm text-on-surface font-semibold">
-                   {new Date(t.startTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                 </span>
-               </div>
-               <div className="flex justify-between items-center bg-surface-container-low p-3 rounded border border-surface-variant">
-                 <span className="font-code-sm text-xs text-on-surface-variant uppercase">Players</span>
-                 <span className="font-code-sm text-sm text-on-surface font-semibold">{t.currentParticipantsCount || 0} / {t.maxParticipants}</span>
-               </div>
-             </div>
-
-             <div className="mt-auto relative z-10">
-               {t.status === 'REGISTRATION' ? (
-                 <button className="w-full py-3 bg-primary text-on-primary font-label-caps text-xs uppercase tracking-widest font-bold rounded shadow-[0_0_15px_rgba(255,193,116,0.2)] hover:opacity-90 transition-opacity">
-                   Register Now
-                 </button>
-               ) : t.status === 'IN_PROGRESS' ? (
-                 <button className="w-full py-3 bg-surface-variant text-on-surface font-label-caps text-xs uppercase tracking-widest font-bold rounded hover:bg-surface-bright transition-colors flex justify-center items-center gap-2">
-                   <span className="material-symbols-outlined text-[18px]">visibility</span> Spectate
-                 </button>
-               ) : (
-                 <button className="w-full py-3 bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-caps text-xs uppercase tracking-widest font-bold rounded cursor-not-allowed">
-                   {t.status === 'COMPLETED' ? 'Tournament Concluded' : 'Registration Closed'}
-                 </button>
-               )}
-             </div>
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-surface-container border border-surface-variant rounded-xl p-6 h-[350px] animate-pulse">
+                 <div className="flex justify-between items-start mb-4">
+                   <div className="w-16 h-6 bg-surface-variant rounded"></div>
+                   <div className="w-16 h-6 bg-surface-variant rounded"></div>
+                 </div>
+                 <div className="w-3/4 h-8 bg-surface-variant rounded mb-2"></div>
+                 <div className="w-full h-12 bg-surface-variant rounded mb-6"></div>
+                 <div className="space-y-3 mb-6">
+                   <div className="w-full h-10 bg-surface-container-low rounded border border-surface-variant"></div>
+                   <div className="w-full h-10 bg-surface-container-low rounded border border-surface-variant"></div>
+                 </div>
+                 <div className="w-full h-12 bg-surface-variant rounded"></div>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : error ? (
+          <div className="text-center py-20 bg-surface-container border border-surface-variant rounded-xl">
+            <span className="material-symbols-outlined text-[48px] text-error mb-4">error</span>
+            <h3 className="text-xl font-bold font-headline-lg mb-2">Error Loading Tournaments</h3>
+            <p className="text-on-surface-variant mb-6">{error}</p>
+            <button onClick={fetchTournaments} className="px-6 py-2 bg-primary text-on-primary rounded font-bold font-label-caps uppercase tracking-widest text-xs hover:opacity-90 transition-opacity">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {displayTournaments.map((t) => (
+              <TournamentCard 
+                key={t._id} 
+                tournament={t} 
+                onRegistrationSuccess={fetchTournaments} 
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </div>
     </>
   );
 }

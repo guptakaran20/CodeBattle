@@ -88,7 +88,12 @@ export const getBattleHistory = async (req: AuthenticatedRequest, res: Response,
 
 export const getBattle = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string })
+    const identifier = req.params.battleCode as string;
+    const query = identifier.match(/^[0-9a-fA-F]{24}$/) 
+      ? { $or: [{ _id: identifier }, { battleCode: identifier }] }
+      : { battleCode: identifier };
+
+    const battle = await Battle.findOne(query)
       .populate('problem', 'title slug difficulty description examples constraints testcases starterCode')
       .populate('creator', 'username name')
       .populate('teams.members', 'username name avatar rating');
@@ -163,7 +168,12 @@ export const joinBattle = async (req: AuthenticatedRequest, res: Response, next:
       return res.status(400).json({ success: false, message: 'You are already in an active battle.' });
     }
 
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
+    const identifier = req.params.battleCode as string;
+    const query = identifier.match(/^[0-9a-fA-F]{24}$/) 
+      ? { $or: [{ _id: identifier }, { battleCode: identifier }] }
+      : { battleCode: identifier };
+
+    const battle = await Battle.findOne(query);
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }
@@ -210,22 +220,31 @@ export const joinBattle = async (req: AuthenticatedRequest, res: Response, next:
 
 export const startBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string })
+    const identifier = req.params.battleCode as string;
+    const query = identifier.match(/^[0-9a-fA-F]{24}$/) 
+      ? { $or: [{ _id: identifier }, { battleCode: identifier }] }
+      : { battleCode: identifier };
+
+    const battle = await Battle.findOne(query)
       .populate('teams.members')
       .populate('problem');
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }
 
+    // Allow creator to start, OR if it's a tournament battle, allow any participant to start
+    const allMembers = battle.teams.flatMap((t: any) => t.members.map((m: any) => m._id ? m._id.toString() : m.toString()));
+    
     if (battle.creator.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Only the creator can start the battle' });
+      if (!(battle.battleType === 'TOURNAMENT' && allMembers.includes(req.user.id))) {
+        return res.status(403).json({ success: false, message: 'Only the creator can start the battle' });
+      }
     }
 
     if (battle.status !== 'WAITING') {
       return res.status(400).json({ success: false, message: 'Battle cannot be started' });
     }
 
-    const allMembers = battle.teams.flatMap(t => t.members);
     if (allMembers.length < 2) {
       return res.status(400).json({ success: false, message: 'Not enough players to start' });
     }
@@ -277,7 +296,12 @@ export const startBattle = async (req: AuthenticatedRequest, res: Response, next
 
 export const cancelBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
+    const identifier = req.params.battleCode as string;
+    const query = identifier.match(/^[0-9a-fA-F]{24}$/) 
+      ? { $or: [{ _id: identifier }, { battleCode: identifier }] }
+      : { battleCode: identifier };
+
+    const battle = await Battle.findOne(query);
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }
@@ -307,7 +331,12 @@ export const cancelBattle = async (req: AuthenticatedRequest, res: Response, nex
 
 export const leaveBattle = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const battle = await Battle.findOne({ battleCode: req.params.battleCode as string });
+    const identifier = req.params.battleCode as string;
+    const query = identifier.match(/^[0-9a-fA-F]{24}$/) 
+      ? { $or: [{ _id: identifier }, { battleCode: identifier }] }
+      : { battleCode: identifier };
+
+    const battle = await Battle.findOne(query);
     if (!battle) {
       return res.status(404).json({ success: false, message: 'Battle not found' });
     }

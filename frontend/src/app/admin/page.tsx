@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {api} from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -19,7 +20,8 @@ export default function AdminDashboardPage() {
     difficulty: 'EASY',
     battleDuration: 15,
     maxParticipants: 4,
-    prizePool: 'Glory'
+    prizePool: 'Glory',
+    startTime: ''
   });
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export default function AdminDashboardPage() {
     try {
       const res = await api.post('/tournaments', newTournament);
       if (res.data.success) {
+        toast.success('Tournament created successfully!');
         fetchTournaments();
         setNewTournament({
           title: '',
@@ -74,20 +77,22 @@ export default function AdminDashboardPage() {
           difficulty: 'EASY',
           battleDuration: 15,
           maxParticipants: 4,
-          prizePool: 'Glory'
+          prizePool: 'Glory',
+          startTime: ''
         });
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to create tournament');
+      toast.error(error.response?.data?.message || 'Failed to create tournament');
     }
   };
 
   const handleAction = async (id: string, action: string) => {
     try {
       await api.post(`/tournaments/${id}/${action}`);
+      toast.success(`Tournament ${action} successful!`);
       fetchTournaments();
     } catch (error: any) {
-      alert(error.response?.data?.message || `Failed to ${action}`);
+      toast.error(error.response?.data?.message || `Failed to ${action}`);
     }
   };
 
@@ -127,6 +132,16 @@ export default function AdminDashboardPage() {
                   onChange={e => setNewTournament({...newTournament, title: e.target.value})}
                   className="w-full bg-surface-container-high border border-surface-variant rounded-xl p-3 focus:outline-none focus:border-primary transition-colors text-sm" 
                   placeholder="e.g. Summer Code Clash" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-label-caps uppercase tracking-wider text-on-surface-variant mb-1">Start Time</label>
+                <input 
+                  type="datetime-local" required
+                  value={newTournament.startTime} 
+                  onChange={e => setNewTournament({...newTournament, startTime: e.target.value})}
+                  className="w-full bg-surface-container-high border border-surface-variant rounded-xl p-3 focus:outline-none focus:border-primary transition-colors text-sm" 
                 />
               </div>
               
@@ -197,12 +212,12 @@ export default function AdminDashboardPage() {
                         <span>•</span>
                         <span>{t.difficulty}</span>
                         <span>•</span>
-                        <span>{t.participants?.length || 0}/{t.maxParticipants}</span>
+                        <span>{t.currentParticipantsCount || 0}/{t.maxParticipants}</span>
                       </div>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
-                      {t.status === 'DRAFT' && (
+                      {(t.status === 'DRAFT' || t.status === 'REGISTRATION') && (
                         <button onClick={() => handleAction(t._id, 'open-checkin')} className="px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded font-bold text-xs hover:bg-primary/30 transition-colors">
                           Open Check-in
                         </button>

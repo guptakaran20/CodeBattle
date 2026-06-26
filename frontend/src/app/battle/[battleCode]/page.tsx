@@ -76,6 +76,7 @@ export default function BattleLobbyPage() {
   const allMembers = battle.teams.flatMap((t: any) => t.members);
   const isParticipant = currentUser && allMembers.some((m: any) => m._id === currentUser._id || m === currentUser._id);
   const isCreator = currentUser && battle.creator._id === currentUser._id;
+  const canStart = isCreator || (battle.battleType === 'TOURNAMENT' && isParticipant);
   const isFull = allMembers.length >= battle.maxParticipants;
 
   if (displayStatus === 'IN_PROGRESS' || displayStatus === 'COMPLETED') {
@@ -260,12 +261,14 @@ export default function BattleLobbyPage() {
 
         {/* Action Controls */}
         <div className="col-span-12 mt-md mb-xl flex justify-end gap-md">
-          {isCreator ? (
+          {canStart ? (
             <div className="flex gap-md">
-              <button onClick={handleCancel} className="px-xl py-sm bg-error/10 text-error border border-error/30 hover:bg-error/20 font-label-caps text-label-caps uppercase tracking-widest rounded transition-colors flex items-center gap-xs">
-                <span className="material-symbols-outlined text-[18px]">delete</span>
-                Cancel
-              </button>
+              {isCreator && (
+                <button onClick={handleCancel} className="px-xl py-sm bg-error/10 text-error border border-error/30 hover:bg-error/20 font-label-caps text-label-caps uppercase tracking-widest rounded transition-colors flex items-center gap-xs">
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                  Cancel
+                </button>
+              )}
               <button onClick={handleStart} disabled={!isFull} className={`px-xl py-sm font-label-caps text-label-caps uppercase tracking-widest rounded flex items-center gap-xs ${isFull ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant border border-surface-variant cursor-not-allowed'}`}>
                 <span className="material-symbols-outlined text-[18px]">play_arrow</span>
                 Start Match

@@ -25,14 +25,18 @@ export const initializeBattleGateway = (io: Server) => {
       try {
         const { battleCode } = payload;
         
-        const battle = await Battle.findOne({ battleCode }).populate('creator', 'username').populate('teams.members', 'username');
+        const query = battleCode.match(/^[0-9a-fA-F]{24}$/) 
+          ? { $or: [{ _id: battleCode }, { battleCode: battleCode }] }
+          : { battleCode };
+
+        const battle = await Battle.findOne(query).populate('creator', 'username').populate('teams.members', 'username');
         if (!battle) {
           socket.emit(SocketEvents.ERROR, { message: 'Battle not found' });
           return;
         }
 
-        socket.join(`battle_${battleCode}`);
-        (socket as any).currentBattleCode = battleCode;
+        socket.join(`battle_${battle.battleCode}`);
+        (socket as any).currentBattleCode = battle.battleCode;
         (socket as any).currentBattleId = battle._id.toString();
 
         // Clear any pending disconnect timeout for this user
@@ -43,13 +47,13 @@ export const initializeBattleGateway = (io: Server) => {
 
         // Update Presence via Redis
         const userIdStr = user._id.toString();
-        const existingParticipants = await PresenceService.getActiveParticipants(battleCode);
+        const existingParticipants = await PresenceService.getActiveParticipants(battle.battleCode);
         const isNewJoin = !existingParticipants.includes(userIdStr);
         
-        await PresenceService.setPresence(battleCode, userIdStr);
+        await PresenceService.setPresence(battle.battleCode, userIdStr);
 
         // Fetch refreshed participants
-        const updatedParticipants = await PresenceService.getActiveParticipants(battleCode);
+        const updatedParticipants = await PresenceService.getActiveParticipants(battle.battleCode);
 
         // Emit Initial State Sync
         const statePayload: BattleStatePayload = {
@@ -69,7 +73,7 @@ export const initializeBattleGateway = (io: Server) => {
 
         // Broadcast to others if this user is newly joining the presence set
         if (isNewJoin) {
-          socket.to(`battle_${battleCode}`).emit(SocketEvents.USER_JOINED, {
+          socket.to(`battle_${battle.battleCode}`).emit(SocketEvents.USER_JOINED, {
             userId: user._id.toString(),
             username: user.username
           });
@@ -77,7 +81,7 @@ export const initializeBattleGateway = (io: Server) => {
 
         // Heartbeat handler to refresh TTL
         socket.on('presence_heartbeat', async () => {
-          await PresenceService.setPresence(battleCode, user._id.toString());
+          await PresenceService.setPresence(battle.battleCode, user._id.toString());
         });
 
       } catch (error) {
