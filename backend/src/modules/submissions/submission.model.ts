@@ -13,7 +13,6 @@ export interface ISubmission extends Document {
     | 'TIME_LIMIT_EXCEEDED'
     | 'COMPILATION_ERROR'
     | 'RUNTIME_ERROR';
-  judge0Token?: string;
   stdout?: string;
   stderr?: string;
   compileOutput?: string;
@@ -45,7 +44,6 @@ const submissionSchema = new Schema<ISubmission>(
       ],
       default: 'PENDING',
     },
-    judge0Token: { type: String },
     stdout: { type: String },
     stderr: { type: String },
     compileOutput: { type: String },

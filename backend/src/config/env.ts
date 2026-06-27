@@ -12,7 +12,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
-  JUDGE0_URL: z.string().url().default('http://localhost:2358'),
+  PISTON_URL: z.string().url().default('http://localhost:2000'),
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional()
 });

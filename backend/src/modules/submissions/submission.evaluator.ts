@@ -11,7 +11,7 @@ import { RatingService } from '../../services/ranking/RatingService.js';
 import { TournamentEngine } from '../tournaments/tournament.engine.js';
 import { NotificationService } from '../../services/notifications/NotificationService.js';
 
-export const evaluateSubmissionResult = async (submissionId: string, judge0Results: any[]) => {
+export const evaluateSubmissionResult = async (submissionId: string, mappedResults: any[]) => {
   const submission = await Submission.findById(submissionId).populate('user');
   if (!submission) return;
 
@@ -25,18 +25,18 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
   let verdictReason = '';
   let compileOutput = '';
 
-  if (judge0Results.length === 0) {
+  if (mappedResults.length === 0) {
     finalStatus = 'RUNTIME_ERROR';
     verdictReason = 'Execution timed out or backend failed';
   } else {
-    for (const res of judge0Results) {
+    for (const res of mappedResults) {
       if (res.compile_output) compileOutput = Buffer.from(res.compile_output, 'base64').toString('utf-8');
       
       const time = parseFloat(res.time || '0');
       totalExecutionTime += time;
       maxMemory = Math.max(maxMemory, res.memory || 0);
 
-      // 3 is Accepted in Judge0
+      // 3 is Accepted in our mapped statuses
       if (res.status.id === 3) {
         passedTests++;
       } else {
@@ -55,17 +55,18 @@ export const evaluateSubmissionResult = async (submissionId: string, judge0Resul
 
   submission.status = finalStatus as any;
   submission.passedTests = passedTests;
-  submission.totalTests = judge0Results.length > 0 ? judge0Results.length : (submission.totalTests || 0);
+  submission.totalTests = mappedResults.length > 0 ? mappedResults.length : (submission.totalTests || 0);
   submission.executionTime = totalExecutionTime;
   submission.memory = maxMemory;
   submission.verdictReason = verdictReason;
   if (compileOutput) submission.compileOutput = compileOutput;
   
   // Storing stdout and stderr of the first failed test, or the last test if all passed
-  const lastRes = judge0Results.find(r => r.status.id !== 3) || judge0Results[judge0Results.length - 1];
+  const lastRes = mappedResults.find(r => r.status.id !== 3) || mappedResults[mappedResults.length - 1];
   if (lastRes) {
       if (lastRes.stdout) submission.stdout = Buffer.from(lastRes.stdout, 'base64').toString('utf-8');
-      if (lastRes.stderr) submission.stderr = Buffer.from(lastRes.stderr, 'base64').toString('utf-8');
+      // Piston's stderr was merged into compile_output or stdout handling in our mapping,
+      // but let's keep it safe.
   }
 
   await submission.save();

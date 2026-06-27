@@ -7,7 +7,8 @@ import { ReplayService } from '../replays/replay.service.js';
 import type { AuthenticatedRequest } from '../../common/types/auth.types.js';
 import { z } from 'zod';
 import { SubmissionProcessorFactory } from './processors/factory.js';
-import { Judge0Service, LANGUAGE_MAPPING } from './judge0.service.js';
+import { executionService } from './execution/ExecutionService.js';
+import { SubmissionEvaluator } from './execution/SubmissionEvaluator.js';
 import { SocketEvents } from '../websockets/events.js';
 import { getIO } from '../websockets/socket.service.js';
 import { SubmissionCacheService } from '../../services/redis/SubmissionCacheService.js';
@@ -118,27 +119,28 @@ export const runSubmission = async (req: AuthenticatedRequest, res: Response, ne
     // Only run visible testcases (not edge cases)
     const visibleTestcases = testSuite.cases.filter((tc: any) => !tc.isEdgeCase);
 
-    const judge0Submissions = visibleTestcases.map((tc: any) => ({
-      language_id: LANGUAGE_MAPPING[validatedData.language],
-      source_code: validatedData.code,
-      stdin: tc.input,
-      expected_output: tc.expectedOutput
+    // Execute directly and evaluate
+    const executionResults = await executionService.executeBatch(
+      validatedData.code,
+      validatedData.language,
+      visibleTestcases.map((tc: any) => ({ input: tc.input }))
+    );
+
+    const evaluatedResults = SubmissionEvaluator.evaluate(executionResults, visibleTestcases);
+
+    // Map to frontend expected shape
+    const results = evaluatedResults.map(res => ({
+      status: {
+        id: res.statusId,
+        description: res.statusDescription
+      },
+      stdout: res.stdout,
+      compile_output: res.compileOutput,
+      time: res.time,
+      memory: res.memory
     }));
 
-    const tokens = await Judge0Service.submitBatch(judge0Submissions);
-    
-    // For Run Code, we can short-poll synchronously and return results directly.
-    let attempts = 0;
-    let results: any[] = [];
-    while (attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      results = await Judge0Service.getBatchResults(tokens);
-      const isFinished = results.every(r => r.status && r.status.id !== 1 && r.status.id !== 2);
-      if (isFinished) break;
-      attempts++;
-    }
-
-    const allPassed = results.every(r => r.status?.id === 3);
+    const allPassed = results.every(r => r.status.id === 3);
     
     return res.status(200).json({ success: true, data: { passed: allPassed, results } });
   } catch (error: any) {

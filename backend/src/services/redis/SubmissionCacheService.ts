@@ -2,7 +2,6 @@ import { redis } from '../../config/redis.js';
 
 export interface SubmissionCacheData {
   status: string;
-  judge0Token?: string;
   passed?: boolean;
 }
 

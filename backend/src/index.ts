@@ -23,7 +23,7 @@ import problemRoutes from './modules/problems/problem.routes.js';
 import battleRoutes from './modules/battles/battle.routes.js';
 import submissionRoutes from './modules/submissions/submission.routes.js';
 import aiRoutes from './modules/ai/ai.routes.js';
-import judge0Routes from './modules/submissions/judge0.routes.js';
+
 import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
 import matchmakingRoutes from './modules/matchmaking/matchmaking.routes.js';
 import statsRoutes from './modules/stats/stats.routes.js';
@@ -88,7 +88,6 @@ app.get('/api/health/ready', async (req, res) => {
   const checks = {
     mongo: 'ok',
     redis: 'ok',
-    judge0: 'ok',
     gateway: 'ok',
   };
 
@@ -101,14 +100,7 @@ app.get('/api/health/ready', async (req, res) => {
     checks.redis = 'error';
     isReady = false;
   }
-  
-  try {
-    const judge0Res = await axios.get(`${env.JUDGE0_URL}/about`, { timeout: 3000 });
-    if (judge0Res.status !== 200) throw new Error('Judge0 not 200 OK');
-  } catch (err) {
-    checks.judge0 = 'error';
-    isReady = false;
-  }
+
 
   if (!isReady) {
     res.status(503).json({ status: 'error', checks });
@@ -127,7 +119,7 @@ app.use('/api/problems', problemRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/judge0', judge0Routes);
+
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/stats', statsRoutes);
