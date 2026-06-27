@@ -85,7 +85,7 @@ Print two space-separated integers, the indices of the two numbers.`,
       ],
       starterCodes: generateStarterCodes(),
       source: 'ORIGINAL',
-      isPublished: true,
+      status: 'PUBLISHED',
       createdBy: dummyUserId
     };
 
@@ -125,7 +125,7 @@ Print a single integer, the maximum amount of water.`,
       ],
       starterCodes: generateStarterCodes(),
       source: 'ORIGINAL',
-      isPublished: true,
+      status: 'PUBLISHED',
       createdBy: dummyUserId
     };
 
@@ -165,7 +165,7 @@ Print space-separated digits representing the sum array.`,
       ],
       starterCodes: generateStarterCodes(),
       source: 'ORIGINAL',
-      isPublished: true,
+      status: 'PUBLISHED',
       createdBy: dummyUserId
     };
 

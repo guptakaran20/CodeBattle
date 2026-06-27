@@ -113,12 +113,7 @@ export default function Dashboard() {
   const isSkeleton = authLoading || loading || !isAuthenticated;
 
   // Mock battles if none exist, just to match the visual vibe of the screenshot
-  const displayBattles = recentBattles.length > 0 ? recentBattles : [
-    { status: 'Win', problem: 'Binary Tree Inversion', difficulty: 'Medium', date: '2h ago' },
-    { status: 'Loss', problem: 'Dijkstra\'s Shortest Path', difficulty: 'Hard', date: 'Yesterday' },
-    { status: 'Win', problem: 'Two Sum Optimization', difficulty: 'Easy', date: '2 days ago' },
-    { status: 'Win', problem: 'Dynamic Prog: Knapsack', difficulty: 'Hard', date: '3 days ago' },
-  ];
+  const displayBattles = recentBattles.length > 0 ? recentBattles : [];
 
   return (
     <>

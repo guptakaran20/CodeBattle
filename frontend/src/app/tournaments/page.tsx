@@ -34,47 +34,7 @@ export default function TournamentsPage() {
   }, []);
 
   // Mock tournaments if none exist from the API, to keep the visual aesthetic alive
-  const displayTournaments = tournaments.length > 0 ? tournaments : [
-    {
-      _id: 't_mock_1',
-      title: 'Global CodeFest 2026',
-      slug: 'global-codefest-2026',
-      shortId: 'TC-1',
-      description: 'The ultimate battle of algorithmic supremacy. 128 players enter, one leaves as Champion.',
-      startTime: new Date(Date.now() + 86400000).toISOString(),
-      maxParticipants: 128,
-      status: TournamentStatus.REGISTRATION,
-      currentParticipantsCount: 42,
-      difficulty: TournamentDifficulty.HARD,
-      isRegistered: false,
-    },
-    {
-      _id: 't_mock_2',
-      title: 'Weekly Blitz Arena',
-      slug: 'weekly-blitz-arena',
-      shortId: 'TC-2',
-      description: 'Fast-paced algorithmic challenges. Quick thinking is the only way to survive.',
-      startTime: new Date(Date.now() - 3600000).toISOString(),
-      maxParticipants: 32,
-      status: TournamentStatus.IN_PROGRESS,
-      currentParticipantsCount: 32,
-      difficulty: TournamentDifficulty.MEDIUM,
-      isRegistered: true,
-    },
-    {
-      _id: 't_mock_3',
-      title: 'Rookie Circuit',
-      slug: 'rookie-circuit',
-      shortId: 'TC-3',
-      description: 'A beginner friendly tournament to get your feet wet in competitive coding.',
-      startTime: new Date(Date.now() - 86400000 * 2).toISOString(),
-      maxParticipants: 64,
-      status: TournamentStatus.COMPLETED,
-      currentParticipantsCount: 64,
-      difficulty: TournamentDifficulty.EASY,
-      isRegistered: false,
-    }
-  ] as Tournament[];
+  const displayTournaments = tournaments.length > 0 ? tournaments : [] as Tournament[];
 
   return (
     <>
