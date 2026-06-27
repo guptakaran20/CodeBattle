@@ -38,32 +38,30 @@ export default function ArenaDashboard() {
   }, []);
 
   useEffect(() => {
-    // We need the raw socket to listen to the global namespace.
-    // useMatchmakingSocket doesn't expose the socket instance directly,
-    // so we can quickly connect a new one or modify the hook to export it.
-    // For simplicity, we just establish a quick connection to the root namespace
-    // to listen for GLOBAL_FEED_UPDATE.
-    
+    let feedSocket: any = null;
+
     import('socket.io-client').then(({ io }) => {
       const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-      const feedSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
+      feedSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
       
       feedSocket.on('global_feed_update', (payload: any) => {
         setLiveFeed(prev => {
           // Remove duplicate if it's the same battle
           let newFeed = prev;
-          if (payload.battleCode) {
+          if (payload.battleCode && payload.event !== 'SUBMISSION') {
             newFeed = prev.filter(item => item.battleCode !== payload.battleCode);
           }
           newFeed = [payload, ...newFeed];
           return newFeed.slice(0, 5); // Keep max 5
         });
       });
-
-      return () => {
-        feedSocket.disconnect();
-      };
     });
+
+    return () => {
+      if (feedSocket) {
+        feedSocket.disconnect();
+      }
+    };
   }, []);
 
   useEffect(() => {

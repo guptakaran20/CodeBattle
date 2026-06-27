@@ -139,6 +139,7 @@ export default function ArenaView({ battle, socketHook, currentUser }: ArenaView
     try {
       const res = await api.post(`/submissions/run`, {
         problemId: problem._id,
+        battleId: battle._id,
         language,
         code
       });

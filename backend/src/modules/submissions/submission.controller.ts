@@ -84,6 +84,7 @@ export const createSubmission = async (req: AuthenticatedRequest, res: Response,
 
 const runSubmissionSchema = z.object({
   problemId: z.string(),
+  battleId: z.string().optional(),
   language: z.enum(['CPP', 'JAVA', 'PYTHON']),
   code: z.string().min(1)
 });
@@ -100,6 +101,18 @@ export const runSubmission = async (req: AuthenticatedRequest, res: Response, ne
     const testSuite = await ProblemTestSuite.findOne({ problemId: problem._id, version: problem.versions.testSuiteVersion });
     if (!testSuite) {
       return res.status(500).json({ success: false, message: 'Test suite not found for problem' });
+    }
+
+    if (validatedData.battleId) {
+      const battle = await Battle.findById(validatedData.battleId);
+      if (battle) {
+        const io = getIO();
+        const userObj = req.user as any;
+        io?.to(`battle_${battle.battleCode}`).emit(SocketEvents.SUBMISSION_PENDING, {
+          userId: req.user.id,
+          username: userObj.username || 'User'
+        });
+      }
     }
 
     // Only run visible testcases (not edge cases)

@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
+import axios from 'axios';
 
 // Environment validation (this will throw and exit if env is invalid)
 import { env } from './config/env.js';
@@ -87,6 +88,8 @@ app.get('/api/health/ready', async (req, res) => {
   const checks = {
     mongo: 'ok',
     redis: 'ok',
+    judge0: 'ok',
+    gateway: 'ok',
   };
 
   if (mongoose.connection.readyState !== 1) {
@@ -98,8 +101,15 @@ app.get('/api/health/ready', async (req, res) => {
     checks.redis = 'error';
     isReady = false;
   }
+  
+  try {
+    const judge0Res = await axios.get(`${env.JUDGE0_URL}/about`, { timeout: 3000 });
+    if (judge0Res.status !== 200) throw new Error('Judge0 not 200 OK');
+  } catch (err) {
+    checks.judge0 = 'error';
+    isReady = false;
+  }
 
-  // A proper readiness probe might also ping Judge0, but basic infrastructure is sufficient here
   if (!isReady) {
     res.status(503).json({ status: 'error', checks });
   } else {

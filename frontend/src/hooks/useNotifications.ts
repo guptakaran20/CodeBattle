@@ -46,6 +46,11 @@ export const useNotifications = () => {
     if (isAuthenticated) {
       fetchNotifications();
 
+      // Ensure socket is connected now that we are authenticated
+      if (!socket.connected) {
+        socket.connect();
+      }
+
       // Listen for socket connection event to resync
       const onConnect = () => {
         fetchNotifications();
@@ -96,8 +101,11 @@ export const useNotifications = () => {
     } else {
       setNotifications([]);
       setUnreadCount(0);
+      if (socket.connected) {
+        socket.disconnect();
+      }
     }
-  }, [isAuthenticated, fetchNotifications]);
+  }, [isAuthenticated, fetchNotifications, refreshUser]);
 
   const markAsRead = async (id: string) => {
     // Optimistic update
