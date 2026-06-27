@@ -19,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  refreshUser: () => Promise<void>;
+  refreshUser: (force?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -35,17 +35,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const fetchUser = async (force: boolean = false) => {
+    if (force !== true && typeof window !== 'undefined' && localStorage.getItem('isAuthenticated') !== 'true') {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const res = await api.get('/auth/me');
       if (res.data.success) {
         setUser(res.data.data.user); // getMe wraps it in data: { user: ... }
+        localStorage.setItem('isAuthenticated', 'true');
       } else {
         setUser(null);
+        localStorage.removeItem('isAuthenticated');
       }
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('isAuthenticated');
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await api.post('/auth/logout');
       setUser(null);
+      localStorage.removeItem('isAuthenticated');
     } catch (error) {
       console.error('Logout error', error);
     }

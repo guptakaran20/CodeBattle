@@ -62,7 +62,7 @@ export const useNotifications = () => {
         
         if (data.notification.type === 'RATING_CHANGED') {
           // Trigger a refresh of the AuthContext user to reflect the new rating across the app in real-time
-          refreshUser?.();
+          refreshUser?.(true);
         }
       };
 

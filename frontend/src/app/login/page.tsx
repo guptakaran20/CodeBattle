@@ -20,7 +20,7 @@ export default function LoginPage() {
       try {
         const res = await api.post('/auth/google', { accessToken: tokenResponse.access_token });
         if (res.data.success) {
-          await refreshUser();
+          await refreshUser(true);
           router.push('/dashboard');
         }
       } catch (err: any) {
@@ -35,7 +35,7 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', { email, password });
       if (res.data.success) {
-        await refreshUser();
+        await refreshUser(true);
         if (res.data.data.user.role === 'ADMIN') {
           router.push('/admin');
         } else {

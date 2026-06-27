@@ -19,7 +19,7 @@ export default function RegisterPage() {
       try {
         const res = await api.post('/auth/google', { accessToken: tokenResponse.access_token });
         if (res.data.success) {
-          await refreshUser();
+          await refreshUser(true);
           router.push('/dashboard');
         }
       } catch (err: any) {
@@ -34,7 +34,7 @@ export default function RegisterPage() {
     try {
       const res = await api.post('/auth/register', formData);
       if (res.data.success) {
-        await refreshUser();
+        await refreshUser(true);
         router.push('/dashboard');
       }
     } catch (err: any) {
