@@ -35,8 +35,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const refreshToken = generateRefreshToken({ userId: user.id, role: user.role, tokenVersion: user.refreshTokenVersion });
 
     const isProduction = process.env.NODE_ENV === 'production';
-    res.cookie('accessToken', accessToken, { httpOnly: true, secure: isProduction, sameSite: 'lax', maxAge: 15 * 60 * 1000 });
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: isProduction, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.cookie('accessToken', accessToken, { httpOnly: true, secure: isProduction, sameSite: 'none', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: isProduction, sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
     const userObj = user.toObject();
     delete userObj.password;
@@ -68,8 +68,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const refreshToken = generateRefreshToken({ userId: user.id, role: user.role, tokenVersion: user.refreshTokenVersion });
 
     const isProduction = process.env.NODE_ENV === 'production';
-    res.cookie('accessToken', accessToken, { httpOnly: true, secure: isProduction, sameSite: 'lax', maxAge: 15 * 60 * 1000 });
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: isProduction, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.cookie('accessToken', accessToken, { httpOnly: true, secure: isProduction, sameSite: 'none', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: isProduction, sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
     const userObj = user.toObject();
     delete userObj.password;
@@ -139,14 +139,14 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -200,8 +200,8 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     const isProduction = process.env.NODE_ENV === 'production';
     if (!user || user.refreshTokenVersion !== payload.tokenVersion) {
-      res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
-      res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+      res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
+      res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
       return res.status(401).json({ success: false, message: 'Invalid refresh token', errorCode: 'AUTH_006' });
     }
 
@@ -210,15 +210,15 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 15 * 60 * 1000,
     });
 
     return res.status(200).json({ success: true, data: { message: 'Token refreshed' } });
   } catch (error) {
     const isProduction = process.env.NODE_ENV === 'production';
-    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
     return res.status(401).json({ success: false, message: 'Invalid or expired refresh token', errorCode: 'AUTH_007' });
   }
 };
@@ -230,8 +230,8 @@ export const logout = async (req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     const isProduction = process.env.NODE_ENV === 'production';
-    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProduction, sameSite: 'none' });
 
     return res.status(200).json({ success: true, data: { message: 'Logged out successfully' } });
   } catch (error) {
