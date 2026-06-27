@@ -1,11 +1,9 @@
-import { Redis } from 'ioredis';
+import { Redis, type RedisOptions } from 'ioredis';
+import dotenv from 'dotenv';
 
-// Export a configured singleton instance of Redis
-export const redis = new Redis({
-  host: 'localhost',  // Use 'redis' if using Docker Compose with service name
-  port: 6379,
-  // password: process.env.REDIS_PASSWORD,
-  db: 0,
+dotenv.config();
+
+const redisOptions: RedisOptions = {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   keepAlive: 30000,
@@ -15,7 +13,17 @@ export const redis = new Redis({
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
-});
+};
+
+// Export a configured singleton instance of Redis
+export const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, redisOptions)
+  : new Redis({
+      host: 'localhost',  // Use 'redis' if using Docker Compose with service name
+      port: 6379,
+      db: 0,
+      ...redisOptions,
+    });
 
 redis.on('connect', () => {
   console.log('Connected to Redis successfully');
