@@ -79,9 +79,16 @@ export const useBattleSocket = (battleCode: string) => {
 
     fetchBattle();
 
-    const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+    const socketUrlStr = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
     
-    const socket = io(socketUrl, {
+    // We MUST extract the origin. If NEXT_PUBLIC_BACKEND_URL has '/api', Socket.IO interprets it as a namespace.
+    // The backend does not have an '/api' namespace, causing the 'Invalid namespace' error.
+    let socketOrigin = socketUrlStr;
+    try {
+      socketOrigin = new URL(socketUrlStr).origin;
+    } catch (e) {}
+    
+    const socket = io(socketOrigin, {
       withCredentials: true,
       transports: ['websocket', 'polling']
     });
