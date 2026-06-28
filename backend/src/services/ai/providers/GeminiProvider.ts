@@ -47,8 +47,16 @@ export class GeminiProvider implements IAIProvider {
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const text = response.text();
-    return JSON.parse(text) as CodeReviewResult;
+    let text = response.text();
+    text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    try {
+      return JSON.parse(text) as CodeReviewResult;
+    } catch (e) {
+      console.error('Failed to parse Gemini code review response:', e);
+      console.error('Raw text:', text);
+      throw new Error('Failed to parse AI response');
+    }
   }
 
   async generateSimilarProblem(topicOrBaseProblem: string): Promise<GeneratedProblem> {
@@ -98,11 +106,19 @@ export class GeminiProvider implements IAIProvider {
       "difficulty": "EASY" | "MEDIUM" | "HARD"
     }
     
-    Ensure test cases are perfectly accurate and edge cases are covered.`;
+    Ensure test cases are perfectly accurate and edge cases are covered. Provide exactly 3 to 5 test cases.`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const text = response.text();
-    return JSON.parse(text) as GeneratedProblem;
+    let text = response.text();
+    text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    try {
+      return JSON.parse(text) as GeneratedProblem;
+    } catch (e) {
+      console.error('Failed to parse Gemini generated problem response:', e);
+      console.error('Raw text:', text);
+      throw new Error('Failed to parse AI response');
+    }
   }
 }
