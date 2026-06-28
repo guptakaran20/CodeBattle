@@ -57,7 +57,11 @@ export default function ArenaDashboard() {
 
     import('socket.io-client').then(({ io }) => {
       const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-      feedSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
+      feedSocket = io(socketUrl, { 
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+        forceNew: true 
+      });
       
       feedSocket.on('global_feed_update', (payload: any) => {
         setLiveFeed(prev => {

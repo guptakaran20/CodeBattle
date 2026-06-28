@@ -15,7 +15,8 @@ export const useMatchmakingSocket = () => {
     const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
     const socket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      forceNew: true
     });
     
     socketRef.current = socket;
