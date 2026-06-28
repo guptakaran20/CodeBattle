@@ -7,7 +7,7 @@ type SystemStatus = {
   checks: {
     mongo: 'ok' | 'error' | 'loading';
     redis: 'ok' | 'error' | 'loading';
-    judge0: 'ok' | 'error' | 'loading';
+    Piston: 'ok' | 'error' | 'loading';
     gateway: 'ok' | 'error' | 'loading';
   };
 };
@@ -18,7 +18,7 @@ export default function StatusPage() {
     checks: {
       mongo: 'loading',
       redis: 'loading',
-      judge0: 'loading',
+      Piston: 'loading',
       gateway: 'loading',
     }
   });
@@ -47,7 +47,7 @@ export default function StatusPage() {
           checks: {
             mongo: 'error',
             redis: 'error',
-            judge0: 'error',
+            Piston: 'error',
             gateway: 'error',
           }
         });
@@ -91,9 +91,9 @@ export default function StatusPage() {
           
           <div className="space-y-4">
             <div className="flex justify-between items-center py-4 border-b border-surface-variant">
-              <span className="font-body-md text-body-md text-on-surface">Code Execution Cluster (Judge0)</span>
-              <span className={`font-label-caps text-label-caps ${getStatusColor(data.checks.judge0)}`}>
-                {getStatusText(data.checks.judge0)}
+              <span className="font-body-md text-body-md text-on-surface">Code Execution Cluster (Piston)</span>
+              <span className={`font-label-caps text-label-caps ${getStatusColor(data.checks.Piston)}`}>
+                {getStatusText(data.checks.Piston)}
               </span>
             </div>
             <div className="flex justify-between items-center py-4 border-b border-surface-variant">

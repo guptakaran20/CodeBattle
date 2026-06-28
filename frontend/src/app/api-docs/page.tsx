@@ -144,7 +144,7 @@ export default function ApiDocsPage() {
                     <EventItem name="battle:started" desc="Fired when all players are ready. Provides problem details." />
                     <EventItem name="battle:timer" desc="Syncs the battle countdown clock." />
                     <EventItem name="battle:update" desc="Broadcasts state changes (e.g., player progress)." />
-                    <EventItem name="submission:result" desc="Returns execution results from Judge0." />
+                    <EventItem name="submission:result" desc="Returns execution results from Piston." />
                     <EventItem name="battle:winner" desc="Announces the winner and triggers the end-screen." />
                     <EventItem name="player:joined" desc="Fired when a new participant enters the room." />
                     <EventItem name="player:left" desc="Fired when a participant disconnects." />

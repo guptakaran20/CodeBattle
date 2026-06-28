@@ -29,7 +29,7 @@ export const HowItWorks = () => {
     },
     {
       number: '4',
-      title: 'Judge0 Execution',
+      title: 'Piston Execution',
       description: 'Real-time compilation and test execution',
       icon: 'check_circle',
       color: 'text-emerald-500',

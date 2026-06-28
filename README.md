@@ -28,8 +28,6 @@
 
   <br />
   
-  <!-- Hero Screenshot Placeholder -->
-  <img src="docs/hero-banner.png" alt="CodeArena Hero Banner" width="100%" />
 </div>
 
 <hr />
