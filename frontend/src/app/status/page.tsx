@@ -26,7 +26,14 @@ export default function StatusPage() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/health/ready`);
+        let url = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        try {
+          url = new URL(url).origin;
+        } catch (e) {
+          url = 'http://localhost:4000';
+        }
+        
+        const res = await fetch(`${url}/api/health/ready`);
         // The API returns JSON even on 503
         const json = await res.json();
         if (json && json.checks) {
