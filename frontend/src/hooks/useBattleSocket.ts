@@ -89,8 +89,7 @@ export const useBattleSocket = (battleCode: string) => {
     } catch (e) {}
     
     const socket = io(socketOrigin, {
-      withCredentials: true,
-      transports: ['websocket', 'polling']
+      withCredentials: true
     });
     
     socketRef.current = socket;

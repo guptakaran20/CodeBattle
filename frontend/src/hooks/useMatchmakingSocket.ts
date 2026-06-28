@@ -12,10 +12,15 @@ export const useMatchmakingSocket = () => {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+    let socketUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    try {
+      socketUrl = new URL(socketUrl).origin;
+    } catch (e) {
+      socketUrl = 'http://localhost:4000';
+    }
+
     const socket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
       forceNew: true
     });
     
