@@ -109,7 +109,15 @@ export class PistonExecutor implements CodeExecutor {
       };
 
     } catch (error: any) {
-      console.error('Piston Execution Error:', error.response?.data || error.message);
+      console.error('Piston Execution Error:', error.message);
+      if (error.response) {
+        console.error('Piston Response Status:', error.response.status);
+        console.error('Piston Response Data:', error.response.data);
+      } else if (error.request) {
+        console.error('Piston No Response Received. Request:', error.request);
+      } else {
+        console.error('Piston Error Object:', error);
+      }
       return {
         stdout: '',
         stderr: 'Execution Engine Error',
