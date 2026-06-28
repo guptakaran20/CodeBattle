@@ -62,17 +62,15 @@ export class PistonExecutor implements CodeExecutor {
 
       // Handle Compilation (if applicable)
       if (data.compile) {
-        if (data.compile.stderr) {
-          compileOutput = data.compile.stderr;
-        }
-        if (data.compile.code !== 0) {
+        const compileOut = (data.compile.output || data.compile.stderr || data.compile.stdout || '').trim();
+        if (data.compile.code !== 0 || data.compile.signal) {
           success = false;
           exitCode = data.compile.code || 1;
           // If compilation fails, run might be missing or skipped.
           return {
             stdout: '',
-            stderr: '',
-            compileOutput,
+            stderr: compileOut, // Pass compile output as stderr too, in case evaluators look there
+            compileOutput: compileOut,
             exitCode,
             cpuTime: 0,
             wallTime: 0,

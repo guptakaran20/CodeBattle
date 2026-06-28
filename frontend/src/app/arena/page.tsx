@@ -24,6 +24,21 @@ export default function ArenaDashboard() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { isConnected, queueState, queueStatus, matchFound } = useMatchmakingSocket();
+  const [localQueueState, setLocalQueueState] = useState<{ isQueued: boolean; difficulty?: string }>({ isQueued: false });
+  const [localQueueStatus, setLocalQueueStatus] = useState<any>(null);
+
+  // Sync local queue state with socket queue state when socket updates
+  useEffect(() => {
+    if (queueState.isQueued) {
+      setLocalQueueState(queueState);
+    }
+  }, [queueState]);
+
+  useEffect(() => {
+    if (queueStatus) {
+      setLocalQueueStatus(queueStatus);
+    }
+  }, [queueStatus]);
 
   useEffect(() => {
     // Initial fetch of live feed
@@ -66,24 +81,37 @@ export default function ArenaDashboard() {
 
   useEffect(() => {
     if (matchFound) {
-      toast.success(`Match Found! Opponent ID: ${matchFound.opponentId}`);
+      toast.success(`Match Found!`);
       const timeout = setTimeout(() => {
         router.push(`/battle/${matchFound.battleCode}`);
-      }, 3000);
+      }, 1000);
       return () => clearTimeout(timeout);
     }
   }, [matchFound, router]);
 
   const handleJoinQueue = async (difficulty: string) => {
     try {
+      setLocalQueueState({ isQueued: true, difficulty });
+      setLocalQueueStatus({ queueTime: 0, eloRange: 100 });
       await api.post('/matchmaking/join', { difficulty });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to join queue');
+      const msg = err.response?.data?.message;
+      if (msg === 'Already in queue') {
+        // User is already in queue on backend, so keep showing the popup
+        setLocalQueueState({ isQueued: true, difficulty });
+        setLocalQueueStatus({ queueTime: 0, eloRange: 100 });
+      } else {
+        setLocalQueueState({ isQueued: false });
+        setLocalQueueStatus(null);
+        toast.error(msg || 'Failed to join queue');
+      }
     }
   };
 
   const handleLeaveQueue = async () => {
     try {
+      setLocalQueueState({ isQueued: false });
+      setLocalQueueStatus(null);
       await api.post('/matchmaking/leave');
     } catch (err: any) {
       toast.error('Failed to leave queue');
@@ -158,23 +186,23 @@ export default function ArenaDashboard() {
 
     <div className="min-h-screen p-4 md:p-8 relative font-body-md text-on-surface">
 
-      {queueState.isQueued && !matchFound && (
+      {(queueState.isQueued || localQueueState.isQueued) && !matchFound && (
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <Card className="w-[400px] border-border shadow-2xl bg-surface">
             <CardHeader className="text-center pb-2">
               <Search className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" />
               <CardTitle className="text-2xl font-headline font-black">Searching</CardTitle>
               <CardDescription className="text-lg mt-2">
-                Ranked 1v1 {queueState.difficulty}
+                Ranked 1v1 {localQueueState.difficulty || queueState.difficulty}
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center space-y-6">
               <div className="bg-surface-bright p-4 rounded-lg border border-border">
                 <div className="text-4xl font-mono font-bold text-foreground">
-                  {queueStatus ? `${queueStatus.queueTime}s` : '0s'}
+                  {(localQueueStatus || queueStatus) ? `${(localQueueStatus || queueStatus).queueTime}s` : '0s'}
                 </div>
                 <div className="text-sm text-muted-foreground mt-2 font-mono font-bold">
-                  RATING RANGE: ±{queueStatus?.eloRange || 100}
+                  RATING RANGE: ±{(localQueueStatus || queueStatus)?.eloRange || 100}
                 </div>
               </div>
               <Button variant="destructive" className="w-full font-bold uppercase tracking-wider" onClick={handleLeaveQueue}>
