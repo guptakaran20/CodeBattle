@@ -27,9 +27,6 @@ export default function Home() {
         
         <div className="flex flex-col gap-[60px] px-margin-page max-w-7xl mx-auto w-full pb-xl">
 
-        {/* 2. Platform Stats */}
-        <Stats />
-
         </div>
 
         {/* 4. Built For */}

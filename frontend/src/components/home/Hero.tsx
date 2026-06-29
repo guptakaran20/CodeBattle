@@ -37,15 +37,6 @@ export const Hero = () => {
         
         {/* Left Column: Copy */}
         <div className="w-full lg:w-1/2 flex flex-col items-start text-left min-w-0 shrink-0">
-          
-          {/* Live Indicator */}
-          <div className="mb-6 flex items-center gap-2 bg-surface-variant/50 border border-surface-variant px-3 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant">
-            <div className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </div>
-            2 developers online
-          </div>
 
           <h1 className="font-headline-lg text-5xl md:text-7xl font-bold tracking-tight text-on-surface mb-6 leading-[1.1]">
             Practice. <br/>
